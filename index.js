@@ -1,9 +1,9 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors'; // Import CORS middleware
-import fs from "fs";
-import https from "https";
-import http from "http";
+// import fs from "fs";
+// import https from "https";
+// import http from "http";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import clientRoutes from "./routes/clientRoutes.js";
 import clientRoutes2 from "./routes/clientRoutes2.js";
@@ -73,23 +73,14 @@ app.get("/", (req, res) => {
 });
 
 // Load SSL Certificate
-const sslOptions = {
-  key: fs.readFileSync(process.env.SSL_KEY_PATH),
-  cert: fs.readFileSync(process.env.SSL_CERT_PATH),
-};
+// const sslOptions = {
+//   key: fs.readFileSync(process.env.SSL_KEY_PATH),
+//   cert: fs.readFileSync(process.env.SSL_CERT_PATH),
+// };
 
+// Start the server
 const PORT = process.env.PORT || 3000;
-const HTTPS_PORT = process.env.HTTPS_PORT || 443;
 
-// Start HTTPS Server
-https.createServer(sslOptions, app).listen(HTTPS_PORT, () => {
-  console.log(`🚀 HTTPS Server running on port ${HTTPS_PORT}`);
-});
-
-// Optional: Redirect HTTP to HTTPS
-http.createServer((req, res) => {
-  res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
-  res.end();
-}).listen(PORT, () => {
-  console.log(`🔄 HTTP Server running on port ${PORT}, redirecting to HTTPS`);
+app.listen(PORT, () => {
+  console.log(Server running on port ${PORT});
 });
