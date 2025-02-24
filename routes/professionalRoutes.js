@@ -17,7 +17,7 @@ router.get('/all', getProfessionalsList);
 router.get('/:idOrName', getProfessional);
 router.put('/update/:professionalId', updateProfessional);
 router.delete('/delete/:professionalId', deleteProfessional);
-router.get('/search/:keyword',searchByKeyword);
+router.get('/search/:keyword/:professionalId',searchByKeyword);
 router.get('/email/:email', getProfessionalByEmail);
 
 export default router;
