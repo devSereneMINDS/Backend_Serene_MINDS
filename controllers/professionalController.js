@@ -174,17 +174,20 @@ async function deleteProfessional(req, res) {
 }
 
 async function searchByKeyword(req, res) {
-    const { keyword } = req.params;
-    const searchRegex = `${keyword}%`;; // PostgreSQL pattern matching using LIKE
+    const { keyword, professionalId } = req.params;
+    const searchRegex = `${keyword}%`; // PostgreSQL pattern matching using LIKE
 
     try {
-        // Search both 'client' and 'professional' tables
+        // Search clients who have an appointment with the given professional
         const clients = await sql`
-            SELECT id, name
-            FROM client
-            WHERE name ILIKE ${searchRegex} OR email ILIKE ${searchRegex};
+            SELECT DISTINCT c.id, c.name
+            FROM client c
+            INNER JOIN appointment a ON c.id = a.client_id
+            WHERE a.professional_id = ${professionalId}
+            AND (c.name ILIKE ${searchRegex} OR c.email ILIKE ${searchRegex});
         `;
 
+        // Search professionals independently
         const professionals = await sql`
             SELECT id, full_name AS name
             FROM professional
@@ -202,9 +205,11 @@ async function searchByKeyword(req, res) {
 
         res.status(200).send({ message: "Search results", data: results });
     } catch (error) {
+        console.error("Error performing search:", error);
         res.status(500).send({ message: "Error performing search", error });
     }
 }
+
 
 async function getProfessionalByEmail(req, res) {
     const { email } = req.params;
