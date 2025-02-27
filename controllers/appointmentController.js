@@ -1,5 +1,6 @@
 import sql from "../config/db.js";
 import nodemailer from "nodemailer";
+import { sendWhatsAppMessage } from "./whatsapp.js";
 
 // Utility function for error handling
 function handleError(res, error, message, statusCode = 500) {
@@ -136,48 +137,45 @@ async function createAppointment(req, res) {
       ];
       
       await Promise.all(emailPromises);
-      try {
-        const AISensyUrl = process.env.AISENSY_URL;
-        const apiKey = process.env.AISENSY_API_KEY?.trim();
-
-      const whatsappData = {
-        apiKey,
+      await Promise.all([
+      sendWhatsAppMessage({
         campaignName: "professional_appointment",
         destination: professional.phone,
         userName: "Serene MINDS",
-        templateParams: [client.name, `${new Date(appointment_time).toLocaleDateString()}`, `${new Date(appointment_time).toLocaleTimeString()}`, "A Service",String(duration),String(client.phone_no),message, meet_link || "Not Provided"],
-    };
+        templateParams: [
+          client.name,
+          `${new Date(appointment_time).toLocaleDateString()}`,
+          `${new Date(appointment_time).toLocaleTimeString()}`,
+          "A Service",
+          String(duration),
+          String(client.phone_no),
+          message || "No message provided",
+          meet_link || "Not Provided",
+        ],
+      }),
 
-    const apiResponse = await fetch(AISensyUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(whatsappData),
-    });
+      sendWhatsAppMessage({
+        campaignName: "client_appointment_details",
+        destination: client.phone_no,
+        userName: "Serene MINDS",
+        templateParams: [
+          professional.full_name,
+          professional.full_name,
+          `${new Date(appointment_time).toLocaleDateString()}`,
+          `${new Date(appointment_time).toLocaleTimeString()}`,
+          "A Service",
+          message || "No message provided",
+          meet_link || "Not Provided",
+        ],
+      }),
 
-    const responseBody = await apiResponse.json();
-
-    if (apiResponse.status === 200) {
-      return res.status(200).json({
-        success: true,
-        message: "WhatsApp message sent successfully to Professional about Appointment",
-        responseBody,
-      });
-    } else {
-      return res.status(apiResponse.status).json({
-        success: false,
-        message: `Failed to send WhatsApp message: ${apiResponse.status} ${apiResponse.statusText}`,
-        error: responseBody,
-      });
-    }
-  } catch (error) {
-    console.error("Error sending WhatsApp message:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
+      sendWhatsAppMessage({
+        campaignName: "client_onboarding",
+        destination: client.phone_no,
+        userName: "Serene MINDS",
+        templateParams: [client.name],
+      }),
+    ]);
   
       res.status(201).send({
         message: "Appointment created successfully and email notifications sent.",
