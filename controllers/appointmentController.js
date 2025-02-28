@@ -53,6 +53,11 @@ async function createAppointment(req, res) {
         VALUES (${client_id}, ${professional_id}, ${appointment_time}, ${duration}, ${fee}, ${message || null}, ${status}, ${meet_link || null}, ${phone || null}, ${service || null})
         RETURNING *;
       `;
+
+      // Update client phone number if provided in the appointment request
+      if (phone) {
+        await sql`UPDATE client SET phone_no = ${phone} WHERE id = ${client_id};`;
+      }
   
       // Retrieve client and professional details
       const [client] = await sql`SELECT name, email, phone_no FROM client WHERE id = ${client_id};`;
@@ -150,7 +155,7 @@ async function createAppointment(req, res) {
           `${new Date(appointment_time).toLocaleTimeString()}`,
           String(service) || "No Service Provided",
           String(duration),
-          String(client.phone_no),
+          String(phone),
           message || "No message provided",
           meet_link || "Not Provided",
         ],
@@ -158,7 +163,7 @@ async function createAppointment(req, res) {
 
       sendWhatsAppMessage({
         campaignName: "client_appointment_details",
-        destination: client.phone_no,
+        destination: phone,
         userName: "Serene MINDS",
         templateParams: [
           professional.full_name,
@@ -173,7 +178,7 @@ async function createAppointment(req, res) {
 
       sendWhatsAppMessage({
         campaignName: "client_onboarding",
-        destination: client.phone_no,
+        destination: phone,
         userName: "Serene MINDS",
         templateParams: [client.name],
       }),
