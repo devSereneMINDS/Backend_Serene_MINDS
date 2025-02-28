@@ -75,7 +75,7 @@ async function createAppointment(req, res) {
   
       const appointmentDetails = `
         - Patient Name: ${client.name}
-        - Phone Number: ${client.phone}
+        - Phone Number: ${phone}
         - Date: ${new Date(appointment_time).toLocaleDateString()}
         - Time: ${new Date(appointment_time).toLocaleTimeString()}
         - Location: "Online"
