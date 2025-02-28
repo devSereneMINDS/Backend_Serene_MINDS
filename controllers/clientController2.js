@@ -36,7 +36,7 @@ async function getClientByEmail(req, res) {
 async function createClient(req, res) {
     const {
         name, age, email, sex, phone_no, diagnosis, photo_url, zipcode, city,
-        appointment_id, assessment_id, invoice_id, medical_record_id, q_and_a,
+        appointment_id, assessment_id, invoice_id, medical_record_id, q_and_a, uid,
     } = req.body;
 
     try {
@@ -45,10 +45,10 @@ async function createClient(req, res) {
         }
         const newClient = await sql`
             INSERT INTO client (name, age, email, sex, phone_no, diagnosis, photo_url, zipcode, city, 
-                                appointment_id, assessment_id, invoice_id, medical_record_id, q_and_a)
+                                appointment_id, assessment_id, invoice_id, medical_record_id, q_and_a, uid)
             VALUES (${name}, ${age || null}, ${email }, ${sex || null}, ${phone_no || null}, ${diagnosis || null}, ${photo_url || null}, 
                     ${zipcode || null}, ${city || null}, ${appointment_id || null}, ${assessment_id || null}, 
-                    ${invoice_id || null}, ${medical_record_id || null},${q_and_a || null})
+                    ${invoice_id || null}, ${medical_record_id || null},${q_and_a || null},${uid || null})
             RETURNING *;
         `;
         res.status(201).send({
@@ -87,7 +87,7 @@ async function updateClient(req, res) {
     // Define the updatable fields for the client
     const updatableFields = [
         "name", "age", "email", "sex", "phone_no", "diagnosis", "photo_url", "zipcode", "city",
-        "appointment_id", "assessment_id", "invoice_id", "medical_record_id", "q_and_a"
+        "appointment_id", "assessment_id", "invoice_id", "medical_record_id", "q_and_a", "uid"
     ];
 
     // Extract and filter the fields that are being updated
