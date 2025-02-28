@@ -163,7 +163,7 @@ async function createAppointment(req, res) {
 
       sendWhatsAppMessage({
         campaignName: "client_appointment_details",
-        destination: `91${phone}`,
+        destination: `${phone}`,
         userName: "Serene MINDS",
         templateParams: [
           professional.full_name,
@@ -178,7 +178,7 @@ async function createAppointment(req, res) {
 
       sendWhatsAppMessage({
         campaignName: "client_onboarding",
-        destination: `91${phone}`,
+        destination: `${phone}`,
         userName: "Serene MINDS",
         templateParams: [client.name],
       }),
