@@ -34,6 +34,8 @@ async function createAppointment(req, res) {
       message,
       status,
       meet_link,
+      phone,
+      service,
     } = req.body;
   
     const validStatuses = ["Upcoming", "Completed", "Cancelled"];
@@ -47,8 +49,8 @@ async function createAppointment(req, res) {
     try {
       // Create the appointment
       const [newAppointment] = await sql`
-        INSERT INTO appointment (client_id, professional_id, appointment_time, duration, fee, message, status, meet_link)
-        VALUES (${client_id}, ${professional_id}, ${appointment_time}, ${duration}, ${fee}, ${message || null}, ${status}, ${meet_link || null})
+        INSERT INTO appointment (client_id, professional_id, appointment_time, duration, fee, message, status, meet_link, phone, service)
+        VALUES (${client_id}, ${professional_id}, ${appointment_time}, ${duration}, ${fee}, ${message || null}, ${status}, ${meet_link || null}, ${phone || null}, ${service || null})
         RETURNING *;
       `;
   
@@ -146,7 +148,7 @@ async function createAppointment(req, res) {
           client.name,
           `${new Date(appointment_time).toLocaleDateString()}`,
           `${new Date(appointment_time).toLocaleTimeString()}`,
-          "A Service",
+          String(service) || "No Service Provided",
           String(duration),
           String(client.phone_no),
           message || "No message provided",
@@ -163,7 +165,7 @@ async function createAppointment(req, res) {
           professional.full_name,
           `${new Date(appointment_time).toLocaleDateString()}`,
           `${new Date(appointment_time).toLocaleTimeString()}`,
-          "A Service",
+          String(service) || "No Service Provided",
           message || "No message provided",
           meet_link || "Not Provided",
         ],
