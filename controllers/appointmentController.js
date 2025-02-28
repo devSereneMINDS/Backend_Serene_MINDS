@@ -144,45 +144,55 @@ async function createAppointment(req, res) {
       ];
       
       await Promise.all(emailPromises);
+      // Send WhatsApp messages with error handling
+    try {
       await Promise.all([
-      sendWhatsAppMessage({
-        campaignName: "professional_appointment",
-        destination: professional.phone,
-        userName: "Serene MINDS",
-        templateParams: [
-          client.name,
-          `${new Date(appointment_time).toLocaleDateString()}`,
-          `${new Date(appointment_time).toLocaleTimeString()}`,
-          String(service) || "No Service Provided",
-          String(duration),
-          String(phone),
-          message || "No message provided",
-          meet_link || "Not Provided",
-        ],
-      }),
+        sendWhatsAppMessage({
+          campaignName: "professional_appointment",
+          destination: `${professional?.phone}`,
+          userName: "Serene MINDS",
+          templateParams: [
+            client.name,
+            `${new Date(appointment_time).toLocaleDateString()}`,
+            `${new Date(appointment_time).toLocaleTimeString()}`,
+            String(service) || "No Service Provided",
+            String(duration),
+            String(phone),
+            message || "No message provided",
+            meet_link || "Not Provided",
+          ],
+        }),
 
-      sendWhatsAppMessage({
-        campaignName: "client_appointment_details",
-        destination: `${phone}`,
-        userName: "Serene MINDS",
-        templateParams: [
-          professional.full_name,
-          professional.full_name,
-          `${new Date(appointment_time).toLocaleDateString()}`,
-          `${new Date(appointment_time).toLocaleTimeString()}`,
-          String(service) || "No Service Provided",
-          message || "No message provided",
-          meet_link || "Not Provided",
-        ],
-      }),
+        sendWhatsAppMessage({
+          campaignName: "client_appointment_details",
+          destination: `91${phone}`, // Ensure country code prefix
+          userName: "Serene MINDS",
+          templateParams: [
+            professional.full_name,
+            professional.full_name,
+            `${new Date(appointment_time).toLocaleDateString()}`,
+            `${new Date(appointment_time).toLocaleTimeString()}`,
+            String(service) || "No Service Provided",
+            message || "No message provided",
+            meet_link || "Not Provided",
+          ],
+        }),
 
-      sendWhatsAppMessage({
-        campaignName: "client_onboarding",
-        destination: `${phone}`,
-        userName: "Serene MINDS",
-        templateParams: [client.name],
-      }),
-    ]);
+        sendWhatsAppMessage({
+          campaignName: "client_onboarding",
+          destination: `91${phone}`, // Ensure country code prefix
+          userName: "Serene MINDS",
+          templateParams: [client.name],
+        }),
+      ]);
+    } catch (whatsappError) {
+      console.error("Error sending WhatsApp messages:", whatsappError);
+      return res.status(500).json({
+        message: "Appointment created, but failed to send WhatsApp notifications.",
+        data: newAppointment,
+        error: whatsappError,
+      });
+    }
   
       res.status(201).send({
         message: "Appointment created successfully and email notifications sent.",
