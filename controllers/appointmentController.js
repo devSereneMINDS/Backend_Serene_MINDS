@@ -1,6 +1,6 @@
 import sql from "../config/db.js";
 import nodemailer from "nodemailer";
-import { sendWhatsAppMessage } from "./whatsapp.js";
+import { sendWhatsAppMessage2 } from "./whatsapp.js";
 
 // Utility function for error handling
 function handleError(res, error, message, statusCode = 500) {
@@ -147,7 +147,7 @@ async function createAppointment(req, res) {
       // Send WhatsApp messages with error handling
     try {
       await Promise.all([
-        sendWhatsAppMessage({
+        sendWhatsAppMessage2({
           campaignName: "professional_appointment",
           destination: professional.phone,
           userName: "Serene MINDS",
@@ -163,7 +163,7 @@ async function createAppointment(req, res) {
           ],
         }),
 
-        sendWhatsAppMessage({
+        sendWhatsAppMessage2({
           campaignName: "client_appointment_details",
           destination: phone, // Ensure country code prefix
           userName: "Serene MINDS",
@@ -178,7 +178,7 @@ async function createAppointment(req, res) {
           ],
         }),
 
-        sendWhatsAppMessage({
+        sendWhatsAppMessage2({
           campaignName: "client_onboarding",
           destination: phone, // Ensure country code prefix
           userName: "Serene MINDS",
