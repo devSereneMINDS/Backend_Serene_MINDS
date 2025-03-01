@@ -149,7 +149,7 @@ async function createAppointment(req, res) {
       await Promise.all([
         sendWhatsAppMessage({
           campaignName: "professional_appointment",
-          destination: `${professional?.phone}`,
+          destination: professional.phone,
           userName: "Serene MINDS",
           templateParams: [
             client.name,
@@ -165,7 +165,7 @@ async function createAppointment(req, res) {
 
         sendWhatsAppMessage({
           campaignName: "client_appointment_details",
-          destination: `91${phone}`, // Ensure country code prefix
+          destination: phone, // Ensure country code prefix
           userName: "Serene MINDS",
           templateParams: [
             professional.full_name,
@@ -180,7 +180,7 @@ async function createAppointment(req, res) {
 
         sendWhatsAppMessage({
           campaignName: "client_onboarding",
-          destination: `91${phone}`, // Ensure country code prefix
+          destination: phone, // Ensure country code prefix
           userName: "Serene MINDS",
           templateParams: [client.name],
         }),
