@@ -571,8 +571,8 @@ async function getClientDetailsByProfessional(req, res) {
               c.id,
               c.name, 
               c.age, 
-              client.q_and_a?.gender AS gender,
-              client.q_and_a?.["age-group"] AS ageGroup,
+              c.q_and_a->>'gender' AS gender,  -- Extract gender from JSONB
+              c.q_and_a->>'age-group' AS ageGroup, -- Extract age-group from JSONB
               c.phone_no AS phone_number, 
               c.email,
               c.photo_url,
