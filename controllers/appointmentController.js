@@ -594,6 +594,34 @@ async function getClientDetailsByProfessional(req, res) {
   }
 }
 
+async function getAppointmentCounts(req, res) {
+  const { clientId, professionalId } = req.body;
+
+  if (!clientId || !professionalId) {
+    return res.status(400).send({ message: "Client ID and Professional ID are required" });
+  }
+
+  try {
+    const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
+
+    const counts = await sql`
+      SELECT
+        SUM(CASE WHEN a.date < ${today} THEN 1 ELSE 0 END) AS past_appointments,
+        SUM(CASE WHEN a.date >= ${today} THEN 1 ELSE 0 END) AS upcoming_appointments
+      FROM appointment a
+      WHERE a.client_id = ${clientId} AND a.professional_id = ${professionalId};
+    `;
+
+    res.status(200).send({
+      message: "Appointment counts fetched successfully",
+      data: counts[0],
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Error fetching appointment counts", error });
+  }
+}
+
+
 
 
 export {
@@ -608,4 +636,5 @@ export {
   getMonthlyEarnings,
   getClientDetailsByProfessional,
   getMonthlyEarningsAndAppointments,
+  getAppointmentCounts,
 };
