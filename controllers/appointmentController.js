@@ -621,6 +621,47 @@ async function getAppointmentCounts(req, res) {
   }
 }
 
+async function getAppointmentsByClientAndProfessional(req, res) {
+  const { clientId, professionalId } = req.body;
+
+  if (!clientId || !professionalId) {
+    return res.status(400).send({ message: "Client ID and Professional ID are required" });
+  }
+
+  try {
+    const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
+
+    const appointments = await sql`
+      SELECT 
+        a.id, 
+        a.date, 
+        a.time, 
+        a.status, 
+        a.notes, 
+        a.professional_id, 
+        a.client_id
+      FROM appointment a
+      WHERE a.client_id = ${clientId} AND a.professional_id = ${professionalId}
+      ORDER BY a.date DESC;
+    `;
+
+    // Separate past and upcoming appointments
+    const pastAppointments = appointments.filter(a => a.date < today);
+    const upcomingAppointments = appointments.filter(a => a.date >= today);
+
+    res.status(200).send({
+      message: "Appointments fetched successfully",
+      data: {
+        pastAppointments,
+        upcomingAppointments
+      }
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Error fetching appointments", error });
+  }
+}
+
+
 
 
 
@@ -637,4 +678,5 @@ export {
   getClientDetailsByProfessional,
   getMonthlyEarningsAndAppointments,
   getAppointmentCounts,
+  getAppointmentsByClientAndProfessional,
 };
