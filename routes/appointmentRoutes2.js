@@ -10,7 +10,9 @@ import {
     getProfessionalStats,
     getMonthlyEarnings,
     getClientDetailsByProfessional, 
-    getMonthlyEarningsAndAppointments
+    getMonthlyEarningsAndAppointments,
+    getAppointmentCounts,
+    getAppointmentsByClientAndProfessional,
 } from '../controllers/appointmentController.js';
 
 const router = express.Router();
@@ -43,6 +45,10 @@ router.get('/professional/stats/:professionalId', getProfessionalStats);
 router.get('/professional/monthly/:professionalId', getMonthlyEarnings);
 
 router.get('/professional/monthly-stats/:professionalId', getMonthlyEarningsAndAppointments);
+
+router.post('/count', getAppointmentCounts);
+
+router.post('/client/details', getAppointmentsByClientAndProfessional);
 
 router.post('/clients/appointments', getClientDetailsByProfessional);
 
