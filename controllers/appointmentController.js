@@ -573,7 +573,8 @@ async function getClientDetailsByProfessional(req, res) {
               c.age, 
               c.sex, 
               c.phone_no AS phone_number, 
-              c.email, 
+              c.email,
+              c.photo_url,
               c.diagnosis AS disease
           FROM client c
           JOIN appointment a ON c.id = a.client_id
