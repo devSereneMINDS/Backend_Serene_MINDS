@@ -606,8 +606,8 @@ async function getAppointmentCounts(req, res) {
 
     const counts = await sql`
       SELECT
-        SUM(CASE WHEN a.date < ${today} THEN 1 ELSE 0 END) AS past_appointments,
-        SUM(CASE WHEN a.date >= ${today} THEN 1 ELSE 0 END) AS upcoming_appointments
+        SUM(CASE WHEN DATE(a.appointment_time) < ${today} THEN 1 ELSE 0 END) AS past_appointments,
+        SUM(CASE WHEN DATE(a.appointment_time) >= ${today} THEN 1 ELSE 0 END) AS upcoming_appointments
       FROM appointment a
       WHERE a.client_id = ${clientId} AND a.professional_id = ${professionalId};
     `;
@@ -634,20 +634,19 @@ async function getAppointmentsByClientAndProfessional(req, res) {
     const appointments = await sql`
       SELECT 
         a.id, 
-        a.date, 
-        a.time, 
+        a.appointment_time, 
         a.status, 
         a.notes, 
         a.professional_id, 
         a.client_id
       FROM appointment a
       WHERE a.client_id = ${clientId} AND a.professional_id = ${professionalId}
-      ORDER BY a.date DESC;
+      ORDER BY a.appointment_time DESC;
     `;
 
-    // Separate past and upcoming appointments
-    const pastAppointments = appointments.filter(a => a.date < today);
-    const upcomingAppointments = appointments.filter(a => a.date >= today);
+    // Separate past and upcoming appointments based on date
+    const pastAppointments = appointments.filter(a => a.appointment_time.toISOString().split("T")[0] < today);
+    const upcomingAppointments = appointments.filter(a => a.appointment_time.toISOString().split("T")[0] >= today);
 
     res.status(200).send({
       message: "Appointments fetched successfully",
