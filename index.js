@@ -27,7 +27,9 @@ app.use(express.json());
 // connectDb();
 
 // Setup CORS
-const allowedOrigins = (process.env.FRONTEND_URLS || '*').split(',');
+//const allowedOrigins = (process.env.FRONTEND_URLS || '*').split(',');
+
+const allowedOrigins = ('*');
 
 const corsOptions = {
   origin: (origin, callback) => {
