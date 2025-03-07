@@ -29,25 +29,29 @@ app.use(express.json());
 // Setup CORS
 //const allowedOrigins = (process.env.FRONTEND_URLS || '*').split(',');
 
-const allowedOrigins = ('*');
+// const allowedOrigins = ('*');
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or Postman)
-    if (!origin) return callback(null, true);
+// const corsOptions = {
+//   origin: (origin, callback) => {
+//     // Allow requests with no origin (like mobile apps or Postman)
+//     if (!origin) return callback(null, true);
 
-    // Check if the request's origin is in the list of allowed origins
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      callback(null, true); // Allow the request
-    } else {
-      callback(new Error('Not allowed by CORS')); // Deny the request
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
-  credentials: true, // Allow credentials (cookies, headers, etc.)
-};
+//     // Check if the request's origin is in the list of allowed origins
+//     if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+//       callback(null, true); // Allow the request
+//     } else {
+//       callback(new Error('Not allowed by CORS')); // Deny the request
+//     }
+//   },
+//   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
+//   credentials: true, // Allow credentials (cookies, headers, etc.)
+// };
 
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: '*',  // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // const ably = new Ably.Realtime('RmCyEw.Tnw63A:23-5uXcZ8PskXlfhDx8D3r-Vz_SluVCCu02c2rCn0GU');
 // const channel = ably.channels.get('chatroom');
