@@ -55,7 +55,8 @@ async function createAppointment(req, res) {
       `;
 
       // Update client phone number if provided in the appointment request
-      if (phone) {
+      const [existingClient] = await sql`SELECT phone_no FROM client WHERE id = ${client_id};`;
+      if (!existingClient.phone_no && phone) {
         await sql`UPDATE client SET phone_no = ${phone} WHERE id = ${client_id};`;
       }
   
