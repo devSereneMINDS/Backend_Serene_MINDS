@@ -25,127 +25,123 @@ async function getAppointmentsList(req, res) {
 
 // Create a new appointment and send email notifications
 async function createAppointment(req, res) {
-    const {
-      client_id,
-      professional_id,
-      appointment_time,
-      duration,
-      fee,
-      message,
-      status,
-      meet_link,
-      phone,
-      service,
-    } = req.body;
-  
-    const validStatuses = ["Upcoming", "Completed", "Cancelled"];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).send({
-        message:
-          "Invalid status. Must be one of: Upcoming, Completed, Cancelled.",
-      });
-    }
-  
-    try {
-      // Create the appointment
-      const [newAppointment] = await sql`
-        INSERT INTO appointment (client_id, professional_id, appointment_time, duration, fee, message, status, meet_link, phone, service)
-        VALUES (${client_id}, ${professional_id}, ${appointment_time}, ${duration}, ${fee}, ${message || null}, ${status}, ${meet_link || null}, ${phone || null}, ${service || null})
-        RETURNING *;
-      `;
+  const {
+    client_id,
+    professional_id,
+    appointment_time,
+    duration,
+    fee,
+    message,
+    status,
+    meet_link,
+    phone,
+    service,
+  } = req.body;
 
-      // Update client phone number if provided in the appointment request
-      const [existingClient] = await sql`SELECT phone_no FROM client WHERE id = ${client_id};`;
-      if (!existingClient.phone_no && phone) {
-        await sql`UPDATE client SET phone_no = ${phone} WHERE id = ${client_id};`;
+  const validStatuses = ["Upcoming", "Completed", "Cancelled"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).send({
+      message: "Invalid status. Must be one of: Upcoming, Completed, Cancelled.",
+    });
+  }
+
+  try {
+    // Check if the phone number already exists in another client
+    if (phone) {
+      const [existingPhoneClient] = await sql`
+        SELECT id FROM client WHERE phone_no = ${phone} AND id != ${client_id};
+      `;
+      if (existingPhoneClient) {
+        return res.status(400).json({ message: "Phone number already exists for another client." });
       }
-  
-      // Retrieve client and professional details
-      const [client] = await sql`SELECT name, email, phone_no FROM client WHERE id = ${client_id};`;
-      const [professional] = await sql`SELECT full_name, email, phone FROM professional WHERE id = ${professional_id};`;
-  
-      if (!client || !professional) {
-        return res.status(404).send({ message: "Client or Professional not found." });
-      }
-  
-      // Email setup
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-      });
-  
-      const appointmentDetails = `
-        - Patient Name: ${client.name}
-        - Phone Number: ${phone}
-        - Date: ${new Date(appointment_time).toLocaleDateString()}
-        - Time: ${new Date(appointment_time).toLocaleTimeString()}
-        - Location: "Online"
-        - Meeting Link: ${meet_link || "Not Provided"}
-        - Additional Message from Patient: ${message || "No message provided."}
-      `;
-  
-      // Email format for the professional (psychologist)
-      const professionalEmailBody = `
-        <p>Hello <b>${professional.full_name}</b>,</p>
-  
-        <p>This is to inform you that a new appointment has been scheduled.</p>
-  
-         <p><b>Meeting Link:</b> ${meet_link || "Not Provided"}</p>
-  
-        <p><b>Appointment Details:</b></p>
-        <pre>${appointmentDetails}</pre>
-  
-        <p><i>Thank you for providing your valuable services through Serene MINDS.</i></p>
-        <p><u>This is an automated message. Please do not reply.</u></p>
-  
-        <p>Best regards,</p>
-        <p><b>Serene MINDS Team</b></p>
-      `;
-  
-      const clientEmailBody = `
-        <p>Hello <b>${client.name}</b>,</p>
-  
-        <p>Your appointment has been successfully booked.</p>
-  
-        <p><b>Meeting Link:</b> ${meet_link || "Not Provided"}</p>
-  
-        <p><b>Appointment Details:</b></p>
-        <ul>
-          <li><b>Psychologist Name:</b> ${professional.full_name}</li>
-          <li><b>Date:</b> ${new Date(appointment_time).toLocaleDateString()}</li>
-          <li><b>Time:</b> ${new Date(appointment_time).toLocaleTimeString()}</li>
-          <li><b>Mode:</b> "Online"</li>
-          <li><b>Location:</b> "Online"</li>
-        </ul>
-  
-        <p>If you need to reschedule or cancel the appointment, please contact the psychologist.</p>
-  
-        <p><i>This is an automated message. Please do not reply.</i></p>
-  
-        <p>Thank you for choosing Serene MINDS.</p>
-  
-        <p><b>Best regards,</b></p>
-        <p><b>Serene MINDS Team</b></p>
-      `;
-  
-      // Send emails to both client and professional
-      const emailPromises = [
-        transporter.sendMail({
-          from: `"Serene MINDS" <${process.env.EMAIL_USER}>`,
-          to: client.email,
-          subject: `Your Appointment is Confirmed`,
-          html: clientEmailBody, // Use the HTML format here
-        }),
-        transporter.sendMail({
-          from: `"Serene MINDS" <${process.env.EMAIL_USER}>`,
-          to: professional.email,
-          subject: `New Appointment Scheduled with ${client.name}`,
-          html: professionalEmailBody, // Use the HTML format here
-        }),
-      ];
-      
-      await Promise.all(emailPromises);
-      // Send WhatsApp messages with error handling
+    }
+
+    // Create the appointment
+    const [newAppointment] = await sql`
+      INSERT INTO appointment (client_id, professional_id, appointment_time, duration, fee, message, status, meet_link, phone, service)
+      VALUES (${client_id}, ${professional_id}, ${appointment_time}, ${duration}, ${fee}, ${message || null}, ${status}, ${meet_link || null}, ${phone || null}, ${service || null})
+      RETURNING *;
+    `;
+
+    // Update client phone number if it's not already set
+    const [existingClient] = await sql`SELECT phone_no FROM client WHERE id = ${client_id};`;
+    if (!existingClient.phone_no && phone) {
+      await sql`UPDATE client SET phone_no = ${phone} WHERE id = ${client_id};`;
+    }
+
+    // Retrieve client and professional details
+    const [client] = await sql`SELECT name, email, phone_no FROM client WHERE id = ${client_id};`;
+    const [professional] = await sql`SELECT full_name, email, phone FROM professional WHERE id = ${professional_id};`;
+
+    if (!client || !professional) {
+      return res.status(404).send({ message: "Client or Professional not found." });
+    }
+
+    // Email setup
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    });
+
+    const appointmentDetails = `
+      - Patient Name: ${client.name}
+      - Phone Number: ${phone}
+      - Date: ${new Date(appointment_time).toLocaleDateString()}
+      - Time: ${new Date(appointment_time).toLocaleTimeString()}
+      - Location: "Online"
+      - Meeting Link: ${meet_link || "Not Provided"}
+      - Additional Message from Patient: ${message || "No message provided."}
+    `;
+
+    // Email format for the professional (psychologist)
+    const professionalEmailBody = `
+      <p>Hello <b>${professional.full_name}</b>,</p>
+      <p>This is to inform you that a new appointment has been scheduled.</p>
+      <p><b>Meeting Link:</b> ${meet_link || "Not Provided"}</p>
+      <p><b>Appointment Details:</b></p>
+      <pre>${appointmentDetails}</pre>
+      <p><i>Thank you for providing your valuable services through Serene MINDS.</i></p>
+      <p><u>This is an automated message. Please do not reply.</u></p>
+      <p>Best regards,</p>
+      <p><b>Serene MINDS Team</b></p>
+    `;
+
+    const clientEmailBody = `
+      <p>Hello <b>${client.name}</b>,</p>
+      <p>Your appointment has been successfully booked.</p>
+      <p><b>Meeting Link:</b> ${meet_link || "Not Provided"}</p>
+      <p><b>Appointment Details:</b></p>
+      <ul>
+        <li><b>Psychologist Name:</b> ${professional.full_name}</li>
+        <li><b>Date:</b> ${new Date(appointment_time).toLocaleDateString()}</li>
+        <li><b>Time:</b> ${new Date(appointment_time).toLocaleTimeString()}</li>
+        <li><b>Mode:</b> "Online"</li>
+        <li><b>Location:</b> "Online"</li>
+      </ul>
+      <p>If you need to reschedule or cancel the appointment, please contact the psychologist.</p>
+      <p><i>This is an automated message. Please do not reply.</i></p>
+      <p>Thank you for choosing Serene MINDS.</p>
+      <p><b>Best regards,</b></p>
+      <p><b>Serene MINDS Team</b></p>
+    `;
+
+    // Send emails to both client and professional
+    await Promise.all([
+      transporter.sendMail({
+        from: `"Serene MINDS" <${process.env.EMAIL_USER}>`,
+        to: client.email,
+        subject: `Your Appointment is Confirmed`,
+        html: clientEmailBody,
+      }),
+      transporter.sendMail({
+        from: `"Serene MINDS" <${process.env.EMAIL_USER}>`,
+        to: professional.email,
+        subject: `New Appointment Scheduled with ${client.name}`,
+        html: professionalEmailBody,
+      }),
+    ]);
+
+    // Send WhatsApp messages
     try {
       await Promise.all([
         sendWhatsAppMessage2({
@@ -166,7 +162,7 @@ async function createAppointment(req, res) {
 
         sendWhatsAppMessage2({
           campaignName: "client_appointment_details",
-          destination: phone, // Ensure country code prefix
+          destination: phone,
           userName: "Serene MINDS",
           templateParams: [
             professional.full_name,
@@ -181,7 +177,7 @@ async function createAppointment(req, res) {
 
         sendWhatsAppMessage2({
           campaignName: "client_onboarding",
-          destination: phone, // Ensure country code prefix
+          destination: phone,
           userName: "Serene MINDS",
           templateParams: [client.name],
         }),
@@ -194,15 +190,16 @@ async function createAppointment(req, res) {
         error: whatsappError,
       });
     }
-  
-      res.status(201).send({
-        message: "Appointment created successfully and email notifications sent.",
-        data: newAppointment,
-      });
-    } catch (error) {
-      handleError(res, error, "Error creating appointment and sending emails");
-    }
+
+    res.status(201).send({
+      message: "Appointment created successfully and notifications sent.",
+      data: newAppointment,
+    });
+  } catch (error) {
+    handleError(res, error, "Error creating appointment and sending notifications");
   }
+}
+
 
 // Get appointment by ID
 async function getAppointment(req, res) {
