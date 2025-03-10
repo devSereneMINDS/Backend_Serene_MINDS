@@ -47,14 +47,14 @@ async function createAppointment(req, res) {
 
   try {
     // Check if the phone number already exists in another client
-    if (phone) {
-      const [existingPhoneClient] = await sql`
-        SELECT id FROM client WHERE phone_no = ${phone} AND id != ${client_id};
-      `;
-      if (existingPhoneClient) {
-        return res.status(400).json({ message: "Phone number already exists for another client." });
-      }
-    }
+    // if (phone) {
+    //   const [existingPhoneClient] = await sql`
+    //     SELECT id FROM client WHERE phone_no = ${phone} AND id != ${client_id};
+    //   `;
+    //   if (existingPhoneClient) {
+    //     return res.status(400).json({ message: "Phone number already exists for another client." });
+    //   }
+    // }
 
     // Create the appointment
     const [newAppointment] = await sql`
