@@ -39,7 +39,7 @@ async function createProfessional(req, res) {
             VALUES
             (${full_name}, ${email}, ${phone}, ${photo_url}, ${date_of_birth}, ${proof_document},
             ${area_of_expertise}, ${about_me}, ${education}, ${services}, ${fees},
-            ${availability}, ${experience}, ${domain}, ${JSON.stringify(q_and_a)}, ${subscription_id}, ${banking_details},
+            ${availability}, ${experience}, ${domain}, ${q_and_a}, ${subscription_id}, ${banking_details},
             ${linkedin_account}, ${twitter_account}, ${facebook_account}, ${instagram_account}, ${banned_clients},${razorpay_account_details},${uid},${street1},${street2},${city},${state},${pin_code},${country})
             RETURNING *;
         `;
