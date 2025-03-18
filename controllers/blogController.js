@@ -48,7 +48,7 @@ export async function getBlogById(req, res) {
 
 // ✅ Create a new blog
 export async function createBlog(req, res) {
-    const { title, content } = req.body;
+    const { title, content, blog_photo } = req.body;
 
     if (!title || !content) {
         return res.status(400).send({
@@ -58,8 +58,8 @@ export async function createBlog(req, res) {
 
     try {
         const result = await sql`
-            INSERT INTO blogs (title, content)
-            VALUES (${title}, ${content})
+            INSERT INTO blogs (title, content, blog_photo)
+            VALUES (${title}, ${content}, ${blog_photo ? blog_photo : null})
             RETURNING *;
         `;
 
@@ -79,10 +79,10 @@ export async function createBlog(req, res) {
 // ✅ Update an existing blog
 export async function updateBlog(req, res) {
     const { blogId } = req.params;
-    const { title, content } = req.body;
+    const { title, content, blog_photo } = req.body;
 
     if (!title || !content) {
-        return res.status(400).send({
+        return res.status(400).json({
             message: "Title and content are required to update the blog",
         });
     }
@@ -93,28 +93,32 @@ export async function updateBlog(req, res) {
         `;
 
         if (existingBlog.length === 0) {
-            return res.status(404).send({ message: "Blog not found" });
+            return res.status(404).json({ message: "Blog not found" });
         }
 
+        // Update query (conditionally includes blog_photo only if provided)
         const result = await sql`
             UPDATE blogs
-            SET title = ${title}, content = ${content}
+            SET 
+                title = ${title}, 
+                content = ${content}
+                ${blog_photo ? sql`, blog_photo = ${blog_photo}` : sql``}
             WHERE id = ${parseInt(blogId, 10)}
             RETURNING *;
         `;
 
-        res.status(200).send({
+        return res.status(200).json({
             message: "Blog updated successfully",
             data: result[0],
         });
     } catch (error) {
-        console.error("Error updating blog:", error);
-        res.status(500).send({
-            message: "Error updating blog",
-            error,
+        console.error("Error updating blog:", error.message);
+        return res.status(500).json({
+            message: "Internal server error. Please try again later.",
         });
     }
 }
+
 
 // ✅ Delete a blog
 export async function deleteBlog(req, res) {
