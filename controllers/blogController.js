@@ -48,7 +48,7 @@ export async function getBlogById(req, res) {
 
 // ✅ Create a new blog
 export async function createBlog(req, res) {
-    const { title, content, blog_photo } = req.body;
+    const { title, content, blog_photo, slug } = req.body;
 
     if (!title || !content) {
         return res.status(400).send({
@@ -58,8 +58,8 @@ export async function createBlog(req, res) {
 
     try {
         const result = await sql`
-            INSERT INTO blogs (title, content, blog_photo)
-            VALUES (${title}, ${content}, ${blog_photo ? blog_photo : null})
+            INSERT INTO blogs (title, content, blog_photo, slug)
+            VALUES (${title}, ${content}, ${blog_photo ? blog_photo : null}, ${slug})
             RETURNING *;
         `;
 
@@ -79,7 +79,7 @@ export async function createBlog(req, res) {
 // ✅ Update an existing blog
 export async function updateBlog(req, res) {
     const { blogId } = req.params;
-    const { title, content, blog_photo } = req.body;
+    const { title, content, blog_photo,slug } = req.body;
 
     if (!title || !content) {
         return res.status(400).json({
@@ -103,6 +103,7 @@ export async function updateBlog(req, res) {
                 title = ${title}, 
                 content = ${content}
                 ${blog_photo ? sql`, blog_photo = ${blog_photo}` : sql``}
+                ${slug ? sql`, slug = ${slug}` : sql``}
             WHERE id = ${parseInt(blogId, 10)}
             RETURNING *;
         `;
@@ -144,6 +145,32 @@ export async function deleteBlog(req, res) {
         console.error("Error deleting blog:", error);
         res.status(500).send({
             message: "Error deleting blog",
+            error,
+        });
+    }
+}
+
+// ✅ Fetch a blog by slug
+export async function getBlogBySlug(req, res) {
+    const { slug } = req.params;
+
+    try {
+        const blog = await sql`
+            SELECT * FROM blogs WHERE slug = ${slug};
+        `;
+
+        if (blog.length === 0) {
+            return res.status(404).send({ message: "Blog not found" });
+        }
+
+        res.status(200).send({
+            message: "Blog fetched successfully",
+            data: blog[0],
+        });
+    } catch (error) {
+        console.error("Error fetching blog by slug:", error);
+        res.status(500).send({
+            message: "Error fetching blog",
             error,
         });
     }
