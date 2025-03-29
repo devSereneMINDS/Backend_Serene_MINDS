@@ -150,11 +150,47 @@ async function deleteClient(req, res) {
     }
 }
 
+async function handleTallySubmission(req, res) {
+    const { email, ...formData } = req.body;
+
+    try {
+        // 1. Check if client exists
+        const existing = await sql`
+            SELECT id FROM client WHERE email = ${email}
+        `;
+
+        // 2. Insert or update
+        const result = existing.length > 0
+            ? await sql`
+                UPDATE client 
+                SET q_and_a = ${formData}, updated_at = NOW()
+                WHERE email = ${email}
+                RETURNING *
+              `
+            : await sql`
+                INSERT INTO client (email, q_and_a)
+                VALUES (${email}, ${formData})
+                RETURNING *
+              `;
+
+        res.status(200).send({
+            success: true,
+            client: result[0]
+        });
+    } catch (error) {
+        res.status(500).send({
+            success: false,
+            error: error.message
+        });
+    }
+}
+
 export {
     getClientsList,
     createClient,
     getClient,
     updateClient,
     deleteClient,
-    getClientByEmail
+    getClientByEmail,
+    handleTallySubmission,
 };
