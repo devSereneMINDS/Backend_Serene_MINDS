@@ -262,6 +262,8 @@ async function handleTallySubmission(req, res) {
       });
     }
 
+      console.log("Data from Tally",req.body.data?.fields );
+
     // Transform the form data
     const formData = req.body.data?.fields 
       ? transformTallyFields(req.body.data.fields)
