@@ -194,25 +194,49 @@ async function handleTallySubmission(req, res) {
         }
       } 
       else if (field.type === 'MULTIPLE_CHOICE' || field.type === 'CHECKBOXES') {
-        // For fields with options, find the selected option's label
+        // For fields with options, find the selected option's index
         if (field.options && field.options.length > 0) {
           // Handle both array values and single values
           const selectedValues = Array.isArray(field.value) ? field.value : [field.value];
           
-          // Find matching options
-          const selectedOptions = field.options
-            .filter(opt => selectedValues.includes(opt.id))
-            .map(opt => opt.text);
+          // Find matching option indices
+          const selectedIndices = field.options
+            .map((opt, index) => selectedValues.includes(opt.id) ? index.toString() : null)
+            .filter(index => index !== null);
           
           // Store as single value or array based on field type
-          formData[mappedKey] = field.type === 'MULTIPLE_CHOICE' 
-            ? selectedOptions[0] // For radio buttons, take first (should only be one)
-            : selectedOptions;   // For checkboxes, keep as array
+          if (field.type === 'MULTIPLE_CHOICE') {
+            formData[mappedKey] = selectedIndices[0] || '0'; // Default to first option if none selected
+          } else {
+            // For CHECKBOXES, store as array of indices
+            formData[mappedKey] = selectedIndices;
+            
+            // Additionally create boolean flags for each option (q10_1, q10_2, etc.)
+            if (mappedKey === 'q10') {
+              field.options.forEach((opt, index) => {
+                formData[`${mappedKey}_${index}`] = selectedValues.includes(opt.id);
+              });
+            }
+          }
         } else {
           // Fallback to raw value if no options available
           formData[mappedKey] = Array.isArray(field.value) ? field.value[0] : field.value;
         }
       }
+    }
+
+    // Transform special fields to consistent formats
+    if (formData.gender) {
+      formData.gender = formData.gender.toLowerCase().replace(/\s+/g, '-');
+    }
+    if (formData['age-group']) {
+      formData['age-group'] = formData['age-group'].toLowerCase().replace(/\s+/g, '-');
+    }
+    if (formData.occupation) {
+      formData.occupation = formData.occupation.toLowerCase().replace(/\s+/g, '-');
+    }
+    if (formData['marital-status']) {
+      formData['marital-status'] = formData['marital-status'].toLowerCase().replace(/\s+/g, '-');
     }
 
     if (!email) {
