@@ -154,7 +154,7 @@ async function deleteClient(req, res) {
 function transformTallyFields(fields) {
   const result = {};
   
-  // Special fields mapping with their exact Tally keys
+  // Special fields mapping
   const specialFields = {
     'question_RMd0Bv': 'gender',
     'question_leqylV': 'age-group',
@@ -162,7 +162,7 @@ function transformTallyFields(fields) {
     'question_G9KzBQ': 'marital-status'
   };
 
-  // Question number mapping for specific questions
+  // Question number mapping
   const questionMapping = {
     'question_O4lzBk': 'q1',
     'question_VQj01N': 'q2',
@@ -179,16 +179,26 @@ function transformTallyFields(fields) {
     'question_QeMDBl': 'q13'
   };
 
-  // First pass: process special fields and map known questions
   fields.forEach(field => {
-    // Skip checkbox sub-questions (we'll handle them with their parent)
-    if (field.key.includes('_')) return;
+    // Skip checkbox sub-questions (we'll handle them with parent)
+    if (field.key.includes('_') && !field.key.startsWith('question_Ed5L82')) {
+      return;
+    }
+
+    // Handle email field separately
+    if (field.key === 'question_Ed5L82') {
+      result.email = field.value;
+      return;
+    }
 
     // Handle special named fields
     if (specialFields[field.key]) {
-      result[specialFields[field.key]] = Array.isArray(field.value) 
-        ? field.options?.find(opt => opt.id === field.value[0])?.text || field.value[0]
-        : field.value;
+      const option = field.options?.find(opt => 
+        Array.isArray(field.value) 
+          ? opt.id === field.value[0] 
+          : opt.id === field.value
+      );
+      result[specialFields[field.key]] = option?.text || field.value;
       return;
     }
 
@@ -196,13 +206,13 @@ function transformTallyFields(fields) {
     if (questionMapping[field.key]) {
       const questionKey = questionMapping[field.key];
       
-      // Process different field types
       switch (field.type) {
         case 'CHECKBOXES':
           // Store array of selected option texts
-          result[questionKey] = field.value 
-            ? field.value.map(v => field.options?.find(opt => opt.id === v)?.text || v)
-            : [];
+          result[questionKey] = field.value?.map(v => {
+            const option = field.options?.find(opt => opt.id === v);
+            return option?.text || v;
+          }) || [];
           
           // Store individual checkboxes as boolean flags
           field.options?.forEach((option, index) => {
@@ -211,9 +221,9 @@ function transformTallyFields(fields) {
           break;
 
         case 'MULTIPLE_CHOICE':
-          // Store the selected option text
           const value = Array.isArray(field.value) ? field.value[0] : field.value;
-          result[questionKey] = field.options?.find(opt => opt.id === value)?.text || value;
+          const selectedOption = field.options?.find(opt => opt.id === value);
+          result[questionKey] = selectedOption?.text || value;
           break;
 
         default:
@@ -224,7 +234,6 @@ function transformTallyFields(fields) {
 
   return result;
 }
-
 // Extract email from Tally form data
 function extractEmail(payload) {
   // Check direct email field first
@@ -253,8 +262,11 @@ function extractEmail(payload) {
 
 async function handleTallySubmission(req, res) {
   try {
-    // Extract email from the submission
-    const email = extractEmail(req.body);
+    // Extract the fields array from the body
+    const fields = req.body.data?.fields || req.body.fields || [];
+    const email = req.body.data?.fields?.find(f => f.key === 'question_Ed5L82')?.value || 
+                 req.body.email;
+
     if (!email) {
       return res.status(400).json({ 
         success: false,
@@ -262,14 +274,9 @@ async function handleTallySubmission(req, res) {
       });
     }
 
-      console.log("Data from Tally",req.body.data?.fields );
-
     // Transform the form data
-    const formData = req.body.data?.fields 
-      ? transformTallyFields(req.body.data.fields)
-      : req.body;
+    const formData = transformTallyFields(fields);
 
-    // Debug log the transformed data
     console.log("Transformed Tally Data:", {
       email,
       transformedData: formData
