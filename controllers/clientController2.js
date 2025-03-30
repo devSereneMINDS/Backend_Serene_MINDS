@@ -228,12 +228,12 @@ function extractEmail(payload) {
 
 
 async function handleTallySubmission(req, res) {
-  console.log("Raw Tally Submission:", {
-    headers: req.headers,
-    body: req.body,
-    method: req.method,
-    url: req.url
-  });
+  // console.log("Raw Tally Submission:", {
+  //   headers: req.headers,
+  //   body: req.body,
+  //   method: req.method,
+  //   url: req.url
+  // });
 
   try {
     // Extract email from the submission
@@ -279,6 +279,14 @@ async function handleTallySubmission(req, res) {
           )
           RETURNING *
         `;
+
+      console.log("Raw Tally Submission:", {
+        headers: req.headers,
+        body: req.body,
+        method: req.method,
+        url: req.url,
+        transformedData: formData,
+      });
 
     res.status(200).json({
       success: true,
