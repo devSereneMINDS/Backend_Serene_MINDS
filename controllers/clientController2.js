@@ -150,48 +150,150 @@ async function deleteClient(req, res) {
     }
 }
 
+
+function transformTallyFields(fields) {
+  const result = {};
+  const questionMap = {};
+  let questionCounter = 1;
+
+  // Special fields to preserve with their original names
+  const specialFields = {
+    'question_RMd0Bv': 'gender',
+    'question_leqylV': 'age-group',
+    'question_oeDyV5': 'occupation',
+    'question_G9KzBQ': 'marital-status'
+  };
+
+  fields.forEach(field => {
+    // Handle special named fields first
+    if (specialFields[field.key]) {
+      result[specialFields[field.key]] = Array.isArray(field.value) 
+        ? field.value[0] 
+        : field.value;
+      return;
+    }
+
+    // Skip checkbox sub-questions
+    if (field.key.includes('_')) return;
+
+    // Assign question numbers (q1, q2, etc.)
+    if (!questionMap[field.key]) {
+      questionMap[field.key] = `q${questionCounter++}`;
+    }
+    const questionKey = questionMap[field.key];
+
+    // Process different field types
+    switch (field.type) {
+      case 'CHECKBOXES':
+        result[questionKey] = field.value || [];
+        field.options?.forEach((option, index) => {
+          result[`${questionKey}_${index}`] = field.value?.includes(option.id) ?? false;
+        });
+        break;
+
+      case 'MULTIPLE_CHOICE':
+        result[questionKey] = Array.isArray(field.value) ? field.value[0] : field.value;
+        break;
+
+      default:
+        result[questionKey] = field.value;
+    }
+  });
+
+  return result;
+}
+
+// Extract email from Tally form data
+function extractEmail(payload) {
+  // Check direct email field first
+  if (payload.email) return payload.email;
+  
+  // Check in fields array if available
+  if (payload.data?.fields) {
+    const emailField = payload.data.fields.find(f => 
+      f.label.toLowerCase().includes('email') || 
+      f.key.toLowerCase().includes('email')
+    );
+    if (emailField) return Array.isArray(emailField.value) ? emailField.value[0] : emailField.value;
+  }
+
+  // Check common alternative email fields
+  const alternatives = ['userEmail', 'contactEmail', 'customerEmail'];
+  for (const field of alternatives) {
+    if (payload[field]) return payload[field];
+  }
+
+  return null;
+}
+
+
 async function handleTallySubmission(req, res) {
+  console.log("Raw Tally Submission:", {
+    headers: req.headers,
+    body: req.body,
+    method: req.method,
+    url: req.url
+  });
 
-    console.log("Raw Tally Submission:", {
-        headers: req.headers,
-        body: req.body,
-        method: req.method,
-        url: req.url,
-        fields: req.body.data.fields,
-    });
-    
-    const { email, ...formData } = req.body;
+  try {
+    // Extract email from the submission
+    const email = extractEmail(req.body);
+    if (!email) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'No email address found in form submission' 
+      });
+    }
 
-    try {
-        // 1. Check if client exists
-        const existing = await sql`
-            SELECT id FROM client WHERE email = ${email}
+    // Transform the form data
+    const formData = req.body.data?.fields 
+      ? transformTallyFields(req.body.data.fields)
+      : req.body;
+
+    // Check if client exists
+    const existing = await sql`
+      SELECT id FROM client WHERE email = ${email}
+    `;
+
+    // Insert or update client record
+    const result = existing.length > 0
+      ? await sql`
+          UPDATE client 
+          SET 
+            q_and_a = ${formData},
+            updated_at = NOW()
+          WHERE email = ${email}
+          RETURNING *
+        `
+      : await sql`
+          INSERT INTO client (
+            email, 
+            q_and_a,
+            created_at,
+            updated_at
+          ) VALUES (
+            ${email},
+            ${formData},
+            NOW(),
+            NOW()
+          )
+          RETURNING *
         `;
 
-        // 2. Insert or update
-        const result = existing.length > 0
-            ? await sql`
-                UPDATE client 
-                SET q_and_a = ${formData}, updated_at = NOW()
-                WHERE email = ${email}
-                RETURNING *
-              `
-            : await sql`
-                INSERT INTO client (email, q_and_a)
-                VALUES (${email}, ${formData})
-                RETURNING *
-              `;
+    res.status(200).json({
+      success: true,
+      client: result[0],
+      transformedData: formData // For debugging
+    });
 
-        res.status(200).send({
-            success: true,
-            client: result[0]
-        });
-    } catch (error) {
-        res.status(500).send({
-            success: false,
-            error: error.message
-        });
-    }
+  } catch (error) {
+    console.error('Tally submission error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process form submission',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
 }
 
 export {
