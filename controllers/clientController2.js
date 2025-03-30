@@ -183,7 +183,7 @@ async function handleTallySubmission(req, res) {
     for (const field of req.body.data?.fields || []) {
       const mappedKey = fieldMappings[field.key];
       
-      // Skip fields we don't have mappings for (like the UUID sub-questions)
+      // Skip fields we don't have mappings for
       if (!mappedKey) continue;
 
       // Handle different field types appropriately
@@ -194,8 +194,24 @@ async function handleTallySubmission(req, res) {
         }
       } 
       else if (field.type === 'MULTIPLE_CHOICE' || field.type === 'CHECKBOXES') {
-        // For array values, take the first element (Tally sometimes wraps single selections in arrays)
-        formData[mappedKey] = Array.isArray(field.value) ? field.value[0] : field.value;
+        // For fields with options, find the selected option's label
+        if (field.options && field.options.length > 0) {
+          // Handle both array values and single values
+          const selectedValues = Array.isArray(field.value) ? field.value : [field.value];
+          
+          // Find matching options
+          const selectedOptions = field.options.filter(opt => 
+            selectedValues.includes(opt.id)
+            .map(opt => opt.text);
+          
+          // Store as single value or array based on field type
+          formData[mappedKey] = field.type === 'MULTIPLE_CHOICE' 
+            ? selectedOptions[0] // For radio buttons, take first (should only be one)
+            : selectedOptions;   // For checkboxes, keep as array
+        } else {
+          // Fallback to raw value if no options available
+          formData[mappedKey] = Array.isArray(field.value) ? field.value[0] : field.value;
+        }
       }
     }
 
