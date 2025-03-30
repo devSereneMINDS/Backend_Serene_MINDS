@@ -156,7 +156,8 @@ async function handleTallySubmission(req, res) {
         headers: req.headers,
         body: req.body,
         method: req.method,
-        url: req.url
+        url: req.url,
+        fields: req.body.data.fields,
     });
     
     const { email, ...formData } = req.body;
