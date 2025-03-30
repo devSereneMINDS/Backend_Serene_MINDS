@@ -200,8 +200,8 @@ async function handleTallySubmission(req, res) {
           const selectedValues = Array.isArray(field.value) ? field.value : [field.value];
           
           // Find matching options
-          const selectedOptions = field.options.filter(opt => 
-            selectedValues.includes(opt.id)
+          const selectedOptions = field.options
+            .filter(opt => selectedValues.includes(opt.id))
             .map(opt => opt.text);
           
           // Store as single value or array based on field type
