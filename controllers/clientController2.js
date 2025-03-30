@@ -151,6 +151,14 @@ async function deleteClient(req, res) {
 }
 
 async function handleTallySubmission(req, res) {
+
+    console.log("Raw Tally Submission:", {
+        headers: req.headers,
+        body: req.body,
+        method: req.method,
+        url: req.url
+    });
+    
     const { email, ...formData } = req.body;
 
     try {
