@@ -153,10 +153,8 @@ async function deleteClient(req, res) {
 
 function transformTallyFields(fields) {
   const result = {};
-  const questionMap = {};
-  let questionCounter = 1;
-
-  // Special fields to preserve with their original names
+  
+  // Special fields mapping with their exact Tally keys
   const specialFields = {
     'question_RMd0Bv': 'gender',
     'question_leqylV': 'age-group',
@@ -164,39 +162,63 @@ function transformTallyFields(fields) {
     'question_G9KzBQ': 'marital-status'
   };
 
+  // Question number mapping for specific questions
+  const questionMapping = {
+    'question_O4lzBk': 'q1',
+    'question_VQj01N': 'q2',
+    'question_P1D6BP': 'q3',
+    'question_Ed5XbA': 'q4',
+    'question_raB6rp': 'q5',
+    'question_4JB8Nd': 'q6',
+    'question_j6by9Y': 'q7',
+    'question_2aBexg': 'q8',
+    'question_xMjpNE': 'q9',
+    'question_ZEoNRA': 'q10',
+    'question_NlD6BN': 'q11',
+    'question_qDadE8': 'q12',
+    'question_QeMDBl': 'q13'
+  };
+
+  // First pass: process special fields and map known questions
   fields.forEach(field => {
-    // Handle special named fields first
+    // Skip checkbox sub-questions (we'll handle them with their parent)
+    if (field.key.includes('_')) return;
+
+    // Handle special named fields
     if (specialFields[field.key]) {
       result[specialFields[field.key]] = Array.isArray(field.value) 
-        ? field.value[0] 
+        ? field.options?.find(opt => opt.id === field.value[0])?.text || field.value[0]
         : field.value;
       return;
     }
 
-    // Skip checkbox sub-questions
-    if (field.key.includes('_')) return;
+    // Handle mapped questions
+    if (questionMapping[field.key]) {
+      const questionKey = questionMapping[field.key];
+      
+      // Process different field types
+      switch (field.type) {
+        case 'CHECKBOXES':
+          // Store array of selected option texts
+          result[questionKey] = field.value 
+            ? field.value.map(v => field.options?.find(opt => opt.id === v)?.text || v)
+            : [];
+          
+          // Store individual checkboxes as boolean flags
+          field.options?.forEach((option, index) => {
+            result[`${questionKey}_${index}`] = field.value?.includes(option.id) ?? false;
+          });
+          break;
 
-    // Assign question numbers (q1, q2, etc.)
-    if (!questionMap[field.key]) {
-      questionMap[field.key] = `q${questionCounter++}`;
-    }
-    const questionKey = questionMap[field.key];
+        case 'MULTIPLE_CHOICE':
+          // Store the selected option text
+          const value = Array.isArray(field.value) ? field.value[0] : field.value;
+          result[questionKey] = field.options?.find(opt => opt.id === value)?.text || value;
+          break;
 
-    // Process different field types
-    switch (field.type) {
-      case 'CHECKBOXES':
-        result[questionKey] = field.value || [];
-        field.options?.forEach((option, index) => {
-          result[`${questionKey}_${index}`] = field.value?.includes(option.id) ?? false;
-        });
-        break;
-
-      case 'MULTIPLE_CHOICE':
-        result[questionKey] = Array.isArray(field.value) ? field.value[0] : field.value;
-        break;
-
-      default:
-        result[questionKey] = field.value;
+        default:
+          result[questionKey] = field.value;
+      }
     }
   });
 
@@ -214,7 +236,10 @@ function extractEmail(payload) {
       f.label.toLowerCase().includes('email') || 
       f.key.toLowerCase().includes('email')
     );
-    if (emailField) return Array.isArray(emailField.value) ? emailField.value[0] : emailField.value;
+    if (emailField) {
+      const value = Array.isArray(emailField.value) ? emailField.value[0] : emailField.value;
+      return value;
+    }
   }
 
   // Check common alternative email fields
@@ -226,15 +251,7 @@ function extractEmail(payload) {
   return null;
 }
 
-
 async function handleTallySubmission(req, res) {
-  // console.log("Raw Tally Submission:", {
-  //   headers: req.headers,
-  //   body: req.body,
-  //   method: req.method,
-  //   url: req.url
-  // });
-
   try {
     // Extract email from the submission
     const email = extractEmail(req.body);
@@ -249,6 +266,12 @@ async function handleTallySubmission(req, res) {
     const formData = req.body.data?.fields 
       ? transformTallyFields(req.body.data.fields)
       : req.body;
+
+    // Debug log the transformed data
+    console.log("Transformed Tally Data:", {
+      email,
+      transformedData: formData
+    });
 
     // Check if client exists
     const existing = await sql`
@@ -280,22 +303,19 @@ async function handleTallySubmission(req, res) {
           RETURNING *
         `;
 
-      console.log("Raw Tally Submission:", {
-        headers: req.headers,
-        body: req.body,
-        method: req.method,
-        url: req.url,
-        transformedData: formData,
-      });
-
     res.status(200).json({
       success: true,
       client: result[0],
-      transformedData: formData // For debugging
+      transformedData: formData
     });
 
   } catch (error) {
-    console.error('Tally submission error:', error);
+    console.error('Tally submission error:', {
+      error: error.message,
+      stack: error.stack,
+      body: req.body
+    });
+    
     res.status(500).json({
       success: false,
       message: 'Failed to process form submission',
