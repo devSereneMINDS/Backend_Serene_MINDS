@@ -181,7 +181,7 @@ function transformTallyFields(fields) {
 
   fields.forEach(field => {
     // Skip checkbox sub-questions (we'll handle them with parent)
-    if (field.key.includes('_') && !field.key.startsWith('question_Ed5L82')) {
+    if (field.key.includes('_') && field.key !== 'question_Ed5L82') {
       return;
     }
 
@@ -193,12 +193,9 @@ function transformTallyFields(fields) {
 
     // Handle special named fields
     if (specialFields[field.key]) {
-      const option = field.options?.find(opt => 
-        Array.isArray(field.value) 
-          ? opt.id === field.value[0] 
-          : opt.id === field.value
-      );
-      result[specialFields[field.key]] = option?.text || field.value;
+      const value = Array.isArray(field.value) ? field.value[0] : field.value;
+      const option = field.options?.find(opt => opt.id === value);
+      result[specialFields[field.key]] = option?.text || value;
       return;
     }
 
@@ -209,14 +206,14 @@ function transformTallyFields(fields) {
       switch (field.type) {
         case 'CHECKBOXES':
           // Store array of selected option texts
-          result[questionKey] = field.value?.map(v => {
+          result[questionKey] = (field.value || []).map(v => {
             const option = field.options?.find(opt => opt.id === v);
             return option?.text || v;
-          }) || [];
+          });
           
           // Store individual checkboxes as boolean flags
           field.options?.forEach((option, index) => {
-            result[`${questionKey}_${index}`] = field.value?.includes(option.id) ?? false;
+            result[`${questionKey}_${index}`] = (field.value || []).includes(option.id);
           });
           break;
 
@@ -234,6 +231,7 @@ function transformTallyFields(fields) {
 
   return result;
 }
+
 // Extract email from Tally form data
 function extractEmail(payload) {
   // Check direct email field first
