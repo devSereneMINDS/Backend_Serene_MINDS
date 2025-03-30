@@ -151,144 +151,60 @@ async function deleteClient(req, res) {
 }
 
 
-function transformTallyFields(fields) {
-  const result = {};
-  
-  // Special fields mapping
-  const specialFields = {
-    'question_RMd0Bv': 'gender',
-    'question_leqylV': 'age-group',
-    'question_oeDyV5': 'occupation',
-    'question_G9KzBQ': 'marital-status'
-  };
-
-  // Question number mapping
-  const questionMapping = {
-    'question_O4lzBk': 'q1',
-    'question_VQj01N': 'q2',
-    'question_P1D6BP': 'q3',
-    'question_Ed5XbA': 'q4',
-    'question_raB6rp': 'q5',
-    'question_4JB8Nd': 'q6',
-    'question_j6by9Y': 'q7',
-    'question_2aBexg': 'q8',
-    'question_xMjpNE': 'q9',
-    'question_ZEoNRA': 'q10',
-    'question_NlD6BN': 'q11',
-    'question_qDadE8': 'q12',
-    'question_QeMDBl': 'q13'
-  };
-
-  fields.forEach(field => {
-    // Skip checkbox sub-questions (we'll handle them with parent)
-    if (field.key.includes('_') && field.key !== 'question_Ed5L82') {
-      return;
-    }
-
-    // Handle email field separately
-    if (field.key === 'question_Ed5L82') {
-      result.email = field.value;
-      return;
-    }
-
-    // Handle special named fields
-    if (specialFields[field.key]) {
-      const value = Array.isArray(field.value) ? field.value[0] : field.value;
-      const option = field.options?.find(opt => opt.id === value);
-      result[specialFields[field.key]] = option?.text || value;
-      return;
-    }
-
-    // Handle mapped questions
-    if (questionMapping[field.key]) {
-      const questionKey = questionMapping[field.key];
-      
-      switch (field.type) {
-        case 'CHECKBOXES':
-          // Store array of selected option texts
-          result[questionKey] = (field.value || []).map(v => {
-            const option = field.options?.find(opt => opt.id === v);
-            return option?.text || v;
-          });
-          
-          // Store individual checkboxes as boolean flags
-          field.options?.forEach((option, index) => {
-            result[`${questionKey}_${index}`] = (field.value || []).includes(option.id);
-          });
-          break;
-
-        case 'MULTIPLE_CHOICE':
-          const value = Array.isArray(field.value) ? field.value[0] : field.value;
-          const selectedOption = field.options?.find(opt => opt.id === value);
-          result[questionKey] = selectedOption?.text || value;
-          break;
-
-        default:
-          result[questionKey] = field.value;
-      }
-    }
-  });
-
-  return result;
-}
-
-// Extract email from Tally form data
-function extractEmail(payload) {
-  // Check direct email field first
-  if (payload.email) return payload.email;
-  
-  // Check in fields array if available
-  if (payload.data?.fields) {
-    const emailField = payload.data.fields.find(f => 
-      f.label.toLowerCase().includes('email') || 
-      f.key.toLowerCase().includes('email')
-    );
-    if (emailField) {
-      const value = Array.isArray(emailField.value) ? emailField.value[0] : emailField.value;
-      return value;
-    }
-  }
-
-  // Check common alternative email fields
-  const alternatives = ['userEmail', 'contactEmail', 'customerEmail'];
-  for (const field of alternatives) {
-    if (payload[field]) return payload[field];
-  }
-
-  return null;
-}
-
 async function handleTallySubmission(req, res) {
   try {
-    // Extract the raw webhook event data
-    const tallyData = req.body.event?.data || req.body.data || req.body;
-    
-    // Extract fields - handle both direct fields array and nested fields
-    const fields = tallyData.fields || 
-                 tallyData.data?.fields || 
-                 (Array.isArray(tallyData) ? tallyData : []);
+    // Mapping of Tally question keys to our desired field names
+    const fieldMappings = {
+      'question_Ed5L82': 'email',
+      'question_RMd0Bv': 'gender',
+      'question_leqylV': 'age-group',
+      'question_oeDyV5': 'occupation',
+      'question_G9KzBQ': 'marital-status',
+      'question_O4lzBk': 'q1',
+      'question_VQj01N': 'q2',
+      'question_P1D6BP': 'q3',
+      'question_Ed5XbA': 'q4',
+      'question_raB6rp': 'q5',
+      'question_4JB8Nd': 'q6',
+      'question_j6by9Y': 'q7',
+      'question_2aBexg': 'q8',
+      'question_xMjpNE': 'q9',
+      'question_ZEoNRA': 'q10',
+      'question_NlD6BN': 'q11',
+      'question_qDadE8': 'q12',
+      'question_QeMDBl': 'q13'
+    };
 
-    // Extract email - check multiple possible locations
-    const email = tallyData.fields?.find(f => f.key === 'question_Ed5L82')?.value ||
-                tallyData.data?.fields?.find(f => f.key === 'question_Ed5L82')?.value ||
-                req.body.email;
+    // Initialize form data object
+    const formData = {};
+    let email = '';
 
-    if (!email) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'No email address found in form submission',
-        receivedData: tallyData // For debugging
-      });
+    // Process each field in the request
+    for (const field of req.body.data?.fields || []) {
+      const mappedKey = fieldMappings[field.key];
+      
+      // Skip fields we don't have mappings for (like the UUID sub-questions)
+      if (!mappedKey) continue;
+
+      // Handle different field types appropriately
+      if (field.type === 'INPUT_TEXT') {
+        formData[mappedKey] = field.value;
+        if (mappedKey === 'email') {
+          email = field.value.toLowerCase().trim();
+        }
+      } 
+      else if (field.type === 'MULTIPLE_CHOICE' || field.type === 'CHECKBOXES') {
+        // For array values, take the first element (Tally sometimes wraps single selections in arrays)
+        formData[mappedKey] = Array.isArray(field.value) ? field.value[0] : field.value;
+      }
     }
 
-    // Transform the form data
-    const formData = transformTallyFields(fields);
-
-    console.log("Transformed Tally Data:", {
-      email,
-      transformedData: formData,
-      rawFields: fields // For debugging
-    });
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
 
     // Check if client exists
     const existing = await sql`
