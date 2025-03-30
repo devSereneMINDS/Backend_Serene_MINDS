@@ -262,15 +262,24 @@ function extractEmail(payload) {
 
 async function handleTallySubmission(req, res) {
   try {
-    // Extract the fields array from the body
-    const fields = req.body.data?.fields || req.body.fields || [];
-    const email = req.body.data?.fields?.find(f => f.key === 'question_Ed5L82')?.value || 
-                 req.body.email;
+    // Extract the raw webhook event data
+    const tallyData = req.body.event?.data || req.body.data || req.body;
+    
+    // Extract fields - handle both direct fields array and nested fields
+    const fields = tallyData.fields || 
+                 tallyData.data?.fields || 
+                 (Array.isArray(tallyData) ? tallyData : []);
+
+    // Extract email - check multiple possible locations
+    const email = tallyData.fields?.find(f => f.key === 'question_Ed5L82')?.value ||
+                tallyData.data?.fields?.find(f => f.key === 'question_Ed5L82')?.value ||
+                req.body.email;
 
     if (!email) {
       return res.status(400).json({ 
         success: false,
-        message: 'No email address found in form submission' 
+        message: 'No email address found in form submission',
+        receivedData: tallyData // For debugging
       });
     }
 
@@ -279,7 +288,8 @@ async function handleTallySubmission(req, res) {
 
     console.log("Transformed Tally Data:", {
       email,
-      transformedData: formData
+      transformedData: formData,
+      rawFields: fields // For debugging
     });
 
     // Check if client exists
