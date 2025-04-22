@@ -4,7 +4,7 @@ import sql from '../config/db.js';
 const intentHandlers = {
   // Intent to get a random Clinical Psychologist
   'getClinicalProfessional': async () => {
-    const areaOfExpertise = 'clinical'; // Use 'clinical' to match database schema
+    const areaOfExpertise = 'Clinical Psychologist'; // Use 'clinical' to match database schema
 
     try {
       // Use tagged template literal for postgres.js
