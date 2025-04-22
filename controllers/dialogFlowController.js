@@ -3,14 +3,8 @@ import sql from '../config/db.js';
 // Intent handler functions
 const intentHandlers = {
   // Intent to get a random professional by area of expertise
-  'get.professional.by.expertise': async (queryResult) => {
-    const areaOfExpertise = queryResult.parameters?.area_of_expertise;
-
-    if (!areaOfExpertise) {
-      return {
-        fulfillmentText: 'Please specify an area of expertise.',
-      };
-    }
+  'getClinicalProfessional': async () => {
+    const areaOfExpertise = 'Clinical Psychologist'; 
 
     try {
       const professionals = await sql.taggedQuery`
@@ -20,22 +14,22 @@ const intentHandlers = {
 
       if (professionals.rows.length === 0) {
         return {
-          fulfillmentText: `Sorry, no professionals found for ${areaOfExpertise}.`,
+          fulfillmentText: 'Sorry, no Clinical Psychologists found at the moment. Please try again later.',
         };
       }
 
       const randomProfessional = professionals.rows[Math.floor(Math.random() * professionals.rows.length)];
 
       return {
-        fulfillmentText: `I found a professional for ${areaOfExpertise}: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
+        fulfillmentText: `I found a Clinical Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
         payload: {
           professional: randomProfessional,
         },
       };
     } catch (error) {
-      console.error('Error fetching professional:', error);
+      console.error('Error fetching Clinical Psychologist:', error);
       return {
-        fulfillmentText: 'Sorry, something went wrong while fetching a professional. Please try again later.',
+        fulfillmentText: 'Sorry, something went wrong while fetching a Clinical Psychologist. Please try again later.',
       };
     }
   },
