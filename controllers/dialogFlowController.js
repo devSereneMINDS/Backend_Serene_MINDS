@@ -2,23 +2,25 @@ import sql from '../config/db.js';
 
 // Intent handler functions
 const intentHandlers = {
-  // Intent to get a random professional by area of expertise
+  // Intent to get a random Clinical Psychologist
   'getClinicalProfessional': async () => {
-    const areaOfExpertise = 'Clinical Psychologist'; 
+    const areaOfExpertise = 'clinical'; // Use 'clinical' to match database schema
 
     try {
-      const professionals = await sql.taggedQuery`
+      // Use tagged template literal for postgres.js
+      const professionals = await sql`
         SELECT * FROM professional 
-        WHERE area_of_expertise = ${areaOfExpertise};
+        WHERE area_of_expertise = ${areaOfExpertise}
       `;
 
-      if (professionals.rows.length === 0) {
+      // postgres.js returns an array of rows directly
+      if (professionals.length === 0) {
         return {
           fulfillmentText: 'Sorry, no Clinical Psychologists found at the moment. Please try again later.',
         };
       }
 
-      const randomProfessional = professionals.rows[Math.floor(Math.random() * professionals.rows.length)];
+      const randomProfessional = professionals[Math.floor(Math.random() * professionals.length)];
 
       return {
         fulfillmentText: `I found a Clinical Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
