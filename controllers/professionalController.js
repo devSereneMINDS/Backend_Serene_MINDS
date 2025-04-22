@@ -231,7 +231,15 @@ async function getProfessionalByEmail(req, res) {
 
 // Get a random professional by area of expertise
 async function getRandomProfessionalByExpertise(req, res) {
-    const { areaOfExpertise } = req.params;
+    // Extract area_of_expertise from Dialogflow request body
+    const { queryResult } = req.body;
+    const areaOfExpertise = queryResult?.parameters?.area_of_expertise;
+
+    if (!areaOfExpertise) {
+        return res.status(400).json({
+            fulfillmentText: "Please specify an area of expertise.",
+        });
+    }
 
     try {
         const professionals = await sql`
@@ -240,23 +248,27 @@ async function getRandomProfessionalByExpertise(req, res) {
         `;
 
         if (professionals.length === 0) {
-            return res.status(404).send({ 
-                message: `No professionals found for area of expertise: ${areaOfExpertise}` 
+            return res.status(200).json({
+                fulfillmentText: `Sorry, no professionals found for ${areaOfExpertise}.`,
             });
         }
 
         // Select a random professional from the results
         const randomProfessional = professionals[Math.floor(Math.random() * professionals.length)];
 
-        res.status(200).send({
-            message: "Random professional found",
-            data: randomProfessional
+        // Prepare Dialogflow response
+        const fulfillmentText = `I found a professional for ${areaOfExpertise}: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`;
+
+        res.status(200).json({
+            fulfillmentText,
+            payload: {
+                professional: randomProfessional,
+            },
         });
     } catch (error) {
         console.error("Error fetching random professional by expertise:", error);
-        res.status(500).send({ 
-            message: 'Error fetching professional by area of expertise', 
-            error 
+        res.status(500).json({
+            fulfillmentText: "Sorry, something went wrong while fetching a professional. Please try again later.",
         });
     }
 }
