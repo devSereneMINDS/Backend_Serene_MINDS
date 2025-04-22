@@ -36,6 +36,40 @@ const intentHandlers = {
     }
   },
 
+  // Intent to get a random Counseling Psychologist
+  'getCounselingProfessional': async () => {
+    const areaOfExpertise = 'counselling'; // Set to 'counselling' to match database schema
+
+    try {
+      // Use tagged template literal for postgres.js
+      const professionals = await sql`
+        SELECT * FROM professional 
+        WHERE area_of_expertise = ${areaOfExpertise}
+      `;
+
+      // postgres.js returns an array of rows directly
+      if (professionals.length === 0) {
+        return {
+          fulfillmentText: 'Sorry, no Counseling Psychologists found at the moment. Please try again later.',
+        };
+      }
+
+      const randomProfessional = professionals[Math.floor(Math.random() * professionals.length)];
+
+      return {
+        fulfillmentText: `I found a Counseling Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
+        payload: {
+          professional: randomProfessional,
+        },
+      };
+    } catch (error) {
+      console.error('Error fetching Counseling Psychologist:', error);
+      return {
+        fulfillmentText: 'Sorry, something went wrong while fetching a Counseling Psychologist. Please try again later.',
+      };
+    }
+  },
+
   // Default fallback intent
   'Default Fallback Intent': async () => {
     return {
