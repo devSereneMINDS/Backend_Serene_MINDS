@@ -18,6 +18,7 @@ import eventRoutes from "./routes/eventRoutes.js";
 import sendRoutes from "./routes/sendRoutes.js";
 import whatsappRoutes from "./routes/whatsappRoute.js";
 import blogRoutes from "./routes/blogRoutes.js";
+import webhookRoutes from "./routes/webhook.js";
 
 dotenv.config();
 
@@ -74,6 +75,7 @@ app.use("/api/events", eventRoutes);
 app.use("/api/send", sendRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 app.use("/api/blog", blogRoutes);
+app.use("/api/webhook", webhookRoutes);
 app.get("/", (req, res) => {
     res.send("Hello World!");
 });
