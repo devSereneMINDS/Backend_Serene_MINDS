@@ -229,7 +229,37 @@ async function getProfessionalByEmail(req, res) {
     }
 }
 
+// Get a random professional by area of expertise
+async function getRandomProfessionalByExpertise(req, res) {
+    const { areaOfExpertise } = req.params;
 
+    try {
+        const professionals = await sql`
+            SELECT * FROM professional 
+            WHERE area_of_expertise = ${areaOfExpertise};
+        `;
+
+        if (professionals.length === 0) {
+            return res.status(404).send({ 
+                message: `No professionals found for area of expertise: ${areaOfExpertise}` 
+            });
+        }
+
+        // Select a random professional from the results
+        const randomProfessional = professionals[Math.floor(Math.random() * professionals.length)];
+
+        res.status(200).send({
+            message: "Random professional found",
+            data: randomProfessional
+        });
+    } catch (error) {
+        console.error("Error fetching random professional by expertise:", error);
+        res.status(500).send({ 
+            message: 'Error fetching professional by area of expertise', 
+            error 
+        });
+    }
+}
 
 
 export {
@@ -240,4 +270,5 @@ export {
     deleteProfessional,
     searchByKeyword,
     getProfessionalByEmail,
+    getRandomProfessionalByExpertise,
 };
