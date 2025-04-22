@@ -38,7 +38,7 @@ const intentHandlers = {
 
   // Intent to get a random Counseling Psychologist
   'getCounselingProfessional': async () => {
-    const areaOfExpertise = 'counselling'; // Set to 'counselling' to match database schema
+    const areaOfExpertise = 'Counseling Psychologist'; // Set to 'counselling' to match database schema
 
     try {
       // Use tagged template literal for postgres.js
