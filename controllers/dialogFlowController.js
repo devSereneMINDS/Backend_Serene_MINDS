@@ -51,6 +51,7 @@ const intentHandlers = {
 // Main Dialogflow webhook handler
 export async function dialogflowWebhook(req, res) {
   try {
+    console.log('Dialogflow Request Body:', JSON.stringify(req.body, null, 2));
     const { queryResult } = req.body;
     const intentName = queryResult.intent.displayName;
 
