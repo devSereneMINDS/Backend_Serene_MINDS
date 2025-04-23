@@ -64,16 +64,6 @@ const intentHandlers = {
         }
       }
 
-      const sessionPath = outputContexts[0]?.name?.split('/contexts/')[0] || req?.body?.session;
-
-      console.log('Created context:', {
-        name: `${req.body.session}/contexts/selected_professional`,
-        parameters: {
-          professional: randomProfessional,
-          bookingLink: bookingLink
-        }
-      });
-
       return {
         fulfillmentText: `I found a Clinical Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
         outputContexts: [{
@@ -81,7 +71,8 @@ const intentHandlers = {
           lifespanCount: 5,
           parameters: {
             professional: randomProfessional,
-            bookingLink: bookingLink
+            bookingLink: bookingLink,
+            area_of_expertise: areaOfExpertise // Store expertise in context
           }
         }],
         payload: {
@@ -154,16 +145,6 @@ const intentHandlers = {
         }
       }
 
-      const sessionPath = outputContexts[0]?.name?.split('/contexts/')[0] || req?.body?.session;
-
-            console.log('Created context:', {
-              name: `${req.body.session}/contexts/selected_professional`,
-              parameters: {
-                professional: randomProfessional,
-                bookingLink: bookingLink
-              }
-            });
-
       return {
         fulfillmentText: `I found a Counseling Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
         outputContexts: [{
@@ -171,7 +152,8 @@ const intentHandlers = {
           lifespanCount: 5,
           parameters: {
             professional: randomProfessional,
-            bookingLink: bookingLink
+            bookingLink: bookingLink,
+            area_of_expertise: areaOfExpertise // Store expertise in context
           }
         }],
         payload: {
@@ -190,11 +172,9 @@ const intentHandlers = {
   'bookPsychologistSession': async (queryResult, userPhone, outputContexts = [], req) => {
     try {
       const professionalContext = 
-      outputContexts.find(c => c.name.includes('selected_professional')) ||  // Check full path
-      req.body.queryResult.outputContexts?.find(c => c.name.includes('selected_professional')); 
+        outputContexts.find(c => c.name.includes('selected_professional')) ||
+        req.body.queryResult.outputContexts?.find(c => c.name.includes('selected_professional'));
 
-      console.log('Available contexts:', outputContexts);
-      
       if (!professionalContext) {
         return {
           fulfillmentText: 'Please ask for a psychologist recommendation first.',
@@ -259,6 +239,39 @@ const intentHandlers = {
       console.error('Error:', error);
       return {
         fulfillmentText: 'Sorry, something went wrong. Please try again later.',
+      };
+    }
+  },
+
+  // Intent to suggest another professional of same type
+  'suggestAnotherProfessional': async (queryResult, userPhone, outputContexts = [], req) => {
+    try {
+      const professionalContext = 
+        outputContexts.find(c => c.name.includes('selected_professional')) ||
+        req.body.queryResult.outputContexts?.find(c => c.name.includes('selected_professional'));
+
+      if (!professionalContext) {
+        return {
+          fulfillmentText: 'Please ask for a psychologist recommendation first.',
+        };
+      }
+
+      const areaOfExpertise = professionalContext.parameters.area_of_expertise;
+      
+      // Call the appropriate handler based on previous expertise
+      if (areaOfExpertise === 'Clinical Psychologist') {
+        return intentHandlers['getClinicalProfessional'](queryResult, userPhone, outputContexts, req);
+      } else if (areaOfExpertise === 'Counseling Psychologist') {
+        return intentHandlers['getCounselingProfessional'](queryResult, userPhone, outputContexts, req);
+      } else {
+        return {
+          fulfillmentText: 'Sorry, I cannot suggest another professional at this time.'
+        };
+      }
+    } catch (error) {
+      console.error('Error suggesting another professional:', error);
+      return {
+        fulfillmentText: 'Sorry, something went wrong while finding another professional. Please try again later.',
       };
     }
   },
