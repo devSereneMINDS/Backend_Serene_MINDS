@@ -7,7 +7,7 @@ const BOOKING_BASE_URL = 'https://booking.sereneminds.com';
 // Intent handler functions
 const intentHandlers = {
   // Intent to get a random Clinical Psychologist
-  'getClinicalProfessional': async (queryResult, userPhone, outputContexts = []) => {
+  'getClinicalProfessional': async (queryResult, userPhone, outputContexts = [], req) => {
     const areaOfExpertise = 'Clinical Psychologist';
 
     try {
@@ -64,8 +64,7 @@ const intentHandlers = {
         }
       }
 
-      // Get session path correctly
-      const sessionPath = outputContexts[0]?.name.split('/contexts/')[0] || req.body.session;
+      const sessionPath = outputContexts[0]?.name?.split('/contexts/')[0] || req?.body?.session;
 
       return {
         fulfillmentText: `I found a Clinical Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
@@ -90,7 +89,7 @@ const intentHandlers = {
   },
 
   // Intent to get a random Counseling Psychologist
-  'getCounselingProfessional': async (queryResult, userPhone, outputContexts = []) => {
+  'getCounselingProfessional': async (queryResult, userPhone, outputContexts = [], req) => {
     const areaOfExpertise = 'Counseling Psychologist';
 
     try {
@@ -147,7 +146,7 @@ const intentHandlers = {
         }
       }
 
-      const sessionPath = outputContexts[0]?.name.split('/contexts/')[0] || req.body.session;
+      const sessionPath = outputContexts[0]?.name?.split('/contexts/')[0] || req?.body?.session;
 
       return {
         fulfillmentText: `I found a Counseling Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
@@ -251,7 +250,7 @@ const intentHandlers = {
     return {
       fulfillmentText: "I didn't understand that. Could you please rephrase or ask about finding a professional?",
     };
-  },
+  }
 };
 
 // Main Dialogflow webhook handler
@@ -267,7 +266,7 @@ export async function dialogflowWebhook(req, res) {
     }
 
     const handler = intentHandlers[intentName] || intentHandlers['Default Fallback Intent'];
-    const response = await handler(queryResult, userPhone, outputContexts);
+    const response = await handler(queryResult, userPhone, outputContexts, req);
 
     res.status(200).json(response);
   } catch (error) {
