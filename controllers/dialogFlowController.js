@@ -2,21 +2,20 @@ import sql from '../config/db.js';
 
 const AISENSY_URL = process.env.AISENSY_URL;
 const AISENSY_API_KEY = process.env.AISENSY_API_KEY?.trim();
+const BOOKING_BASE_URL = 'https://booking.sereneminds.com';
 
 // Intent handler functions
 const intentHandlers = {
   // Intent to get a random Clinical Psychologist
-  'getClinicalProfessional': async (queryResult, userPhone) => {
-    const areaOfExpertise = 'Clinical Psychologist'; // Use 'clinical' to match database schema
+  'getClinicalProfessional': async (queryResult, userPhone, outputContexts = []) => {
+    const areaOfExpertise = 'Clinical Psychologist';
 
     try {
-      // Use tagged template literal for postgres.js
       const professionals = await sql`
         SELECT * FROM professional 
         WHERE area_of_expertise = ${areaOfExpertise}
       `;
 
-      // postgres.js returns an array of rows directly
       if (professionals.length === 0) {
         return {
           fulfillmentText: 'Sorry, no Clinical Psychologists found at the moment. Please try again later.',
@@ -24,19 +23,19 @@ const intentHandlers = {
       }
 
       const randomProfessional = professionals[Math.floor(Math.random() * professionals.length)];
+      const bookingLink = `${BOOKING_BASE_URL}/${randomProfessional.id}`;
 
       if (userPhone) {
         try {
-          // Prepare Aisensy payload
           const aisensyPayload = {
             apiKey: AISENSY_API_KEY,
             campaignName: "suggestprofessional",
-            destination: userPhone.replace('+', ''), // Remove + if present
+            destination: userPhone.replace('+', ''),
             userName: "Serene MINDS",
             templateParams: [
               randomProfessional.full_name,
               randomProfessional.area_of_expertise || "Clinical Psychology",
-              "English, Hindi" // Languages
+              "English, Hindi"
             ],
             media: randomProfessional.photo_url ? {
               url: randomProfessional.photo_url,
@@ -47,17 +46,13 @@ const intentHandlers = {
             }
           };
 
-          // Remove media field if no photo URL is available
           if (!randomProfessional.photo_url) {
             delete aisensyPayload.media;
           }
 
-          // Send to Aisensy API
           const response = await fetch(AISENSY_URL, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(aisensyPayload),
           });
 
@@ -69,8 +64,19 @@ const intentHandlers = {
         }
       }
 
+      // Get session path correctly
+      const sessionPath = outputContexts[0]?.name.split('/contexts/')[0] || req.body.session;
+
       return {
         fulfillmentText: `I found a Clinical Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
+        outputContexts: [{
+          name: `${sessionPath}/contexts/selected_professional`,
+          lifespanCount: 5,
+          parameters: {
+            professional: randomProfessional,
+            bookingLink: bookingLink
+          }
+        }],
         payload: {
           professional: randomProfessional,
         },
@@ -84,17 +90,15 @@ const intentHandlers = {
   },
 
   // Intent to get a random Counseling Psychologist
-  'getCounselingProfessional': async (queryResult, userPhone) => {
-    const areaOfExpertise = 'Counseling Psychologist'; // Set to 'counselling' to match database schema
+  'getCounselingProfessional': async (queryResult, userPhone, outputContexts = []) => {
+    const areaOfExpertise = 'Counseling Psychologist';
 
     try {
-      // Use tagged template literal for postgres.js
       const professionals = await sql`
         SELECT * FROM professional 
         WHERE area_of_expertise = ${areaOfExpertise}
       `;
 
-      // postgres.js returns an array of rows directly
       if (professionals.length === 0) {
         return {
           fulfillmentText: 'Sorry, no Counseling Psychologists found at the moment. Please try again later.',
@@ -102,20 +106,19 @@ const intentHandlers = {
       }
 
       const randomProfessional = professionals[Math.floor(Math.random() * professionals.length)];
+      const bookingLink = `${BOOKING_BASE_URL}/${randomProfessional.id}`;
 
-      // Send WhatsApp message if phone number is available
       if (userPhone) {
         try {
-          // Prepare Aisensy payload
           const aisensyPayload = {
             apiKey: AISENSY_API_KEY,
             campaignName: "suggestprofessional",
-            destination: userPhone.replace('+', ''), // Remove + if present
+            destination: userPhone.replace('+', ''),
             userName: "Serene MINDS",
             templateParams: [
               randomProfessional.full_name,
-              randomProfessional.area_of_expertise || "Clinical Psychology",
-              "English, Hindi" // Languages
+              randomProfessional.area_of_expertise || "Counseling Psychology",
+              "English, Hindi"
             ],
             media: randomProfessional.photo_url ? {
               url: randomProfessional.photo_url,
@@ -126,17 +129,13 @@ const intentHandlers = {
             }
           };
 
-          // Remove media field if no photo URL is available
           if (!randomProfessional.photo_url) {
             delete aisensyPayload.media;
           }
 
-          // Send to Aisensy API
           const response = await fetch(AISENSY_URL, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(aisensyPayload),
           });
 
@@ -148,8 +147,18 @@ const intentHandlers = {
         }
       }
 
+      const sessionPath = outputContexts[0]?.name.split('/contexts/')[0] || req.body.session;
+
       return {
         fulfillmentText: `I found a Counseling Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
+        outputContexts: [{
+          name: `${sessionPath}/contexts/selected_professional`,
+          lifespanCount: 5,
+          parameters: {
+            professional: randomProfessional,
+            bookingLink: bookingLink
+          }
+        }],
         payload: {
           professional: randomProfessional,
         },
@@ -158,6 +167,81 @@ const intentHandlers = {
       console.error('Error fetching Counseling Psychologist:', error);
       return {
         fulfillmentText: 'Sorry, something went wrong while fetching a Counseling Psychologist. Please try again later.',
+      };
+    }
+  },
+
+  // Intent to provide booking link for psychologist
+  'bookPsychologistSession': async (queryResult, userPhone, outputContexts = []) => {
+    try {
+      const professionalContext = outputContexts.find(c => 
+        c.name.endsWith('selected_professional')
+      );
+      
+      if (!professionalContext) {
+        return {
+          fulfillmentText: 'Please ask for a psychologist recommendation first.',
+        };
+      }
+
+      const professional = professionalContext.parameters.professional;
+      const bookingLink = professionalContext.parameters.bookingLink || 
+                         `${BOOKING_BASE_URL}/${professional.id}`;
+
+      if (userPhone) {
+        try {
+          await fetch(AISENSY_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              apiKey: AISENSY_API_KEY,
+              campaignName: "sendbookinglink",
+              destination: userPhone.replace('+', ''),
+              userName: "Serene MINDS",
+              templateParams: [
+                professional.full_name,
+                bookingLink
+              ],
+              media: professional.photo_url ? {
+                url: professional.photo_url,
+                filename: "professional_photo.jpg"
+              } : undefined
+            })
+          });
+        } catch (error) {
+          console.error('WhatsApp send error:', error);
+        }
+      }
+
+      return {
+        fulfillmentText: `Here's the booking link for Dr. ${professional.full_name}`,
+        fulfillmentMessages: [
+          {
+            text: {
+              text: [
+                `Book your session with Dr. ${professional.full_name}:`
+              ]
+            }
+          },
+          {
+            payload: {
+              richContent: [
+                [
+                  {
+                    type: "button",
+                    text: "Book Now",
+                    link: bookingLink
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      };
+    } catch (error) {
+      console.error('Error:', error);
+      return {
+        fulfillmentText: 'Sorry, something went wrong. Please try again later.',
       };
     }
   },
@@ -173,28 +257,23 @@ const intentHandlers = {
 // Main Dialogflow webhook handler
 export async function dialogflowWebhook(req, res) {
   try {
-    const { queryResult, originalDetectIntentRequest } = req.body;
+    const { queryResult, originalDetectIntentRequest, outputContexts = [] } = req.body;
     const intentName = queryResult.intent.displayName;
 
-    // Extract WhatsApp number from Aisensy payload
-    let userPhone = null;
-    if (originalDetectIntentRequest?.payload?.AiSensyMobileNumber) {
-      userPhone = originalDetectIntentRequest.payload.AiSensyMobileNumber;
-      // Ensure number is in correct format (E.164 without +)
-      userPhone = userPhone.replace(/\D/g, ''); // Remove all non-digit characters
-      if (userPhone.startsWith('0')) {
-        userPhone = '91' + userPhone.substring(1); // Handle local Indian numbers
-      }
+    let userPhone = originalDetectIntentRequest?.payload?.AiSensyMobileNumber;
+    if (userPhone) {
+      userPhone = userPhone.replace(/\D/g, '');
+      if (userPhone.startsWith('0')) userPhone = '91' + userPhone.substring(1);
     }
 
     const handler = intentHandlers[intentName] || intentHandlers['Default Fallback Intent'];
-    const response = await handler(queryResult, userPhone);
+    const response = await handler(queryResult, userPhone, outputContexts);
 
     res.status(200).json(response);
   } catch (error) {
-    console.error('Error processing Dialogflow request:', error);
+    console.error('Webhook error:', error);
     res.status(500).json({
-      fulfillmentText: 'Something went wrong on the server. Please try again later.',
+      fulfillmentText: 'Something went wrong. Please try again later.',
     });
   }
 }
