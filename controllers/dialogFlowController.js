@@ -187,7 +187,7 @@ const intentHandlers = {
   },
 
   // Intent to provide booking link for psychologist
-  'bookPsychologistSession': async (queryResult, userPhone, outputContexts = []) => {
+  'bookPsychologistSession': async (queryResult, userPhone, outputContexts = [], req) => {
     try {
       const professionalContext = 
       outputContexts.find(c => c.name.includes('selected_professional')) ||  // Check full path
