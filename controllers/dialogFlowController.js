@@ -1,5 +1,8 @@
 import sql from '../config/db.js';
 
+const AISENSY_URL = process.env.AISENSY_URL;
+const AISENSY_API_KEY = process.env.AISENSY_API_KEY?.trim();
+
 // Intent handler functions
 const intentHandlers = {
   // Intent to get a random Clinical Psychologist
