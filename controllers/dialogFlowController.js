@@ -66,6 +66,14 @@ const intentHandlers = {
 
       const sessionPath = outputContexts[0]?.name?.split('/contexts/')[0] || req?.body?.session;
 
+      console.log('Created context:', {
+        name: `${req.body.session}/contexts/selected_professional`,
+        parameters: {
+          professional: randomProfessional,
+          bookingLink: bookingLink
+        }
+      });
+
       return {
         fulfillmentText: `I found a Clinical Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
         outputContexts: [{
@@ -148,6 +156,14 @@ const intentHandlers = {
 
       const sessionPath = outputContexts[0]?.name?.split('/contexts/')[0] || req?.body?.session;
 
+            console.log('Created context:', {
+              name: `${req.body.session}/contexts/selected_professional`,
+              parameters: {
+                professional: randomProfessional,
+                bookingLink: bookingLink
+              }
+            });
+
       return {
         fulfillmentText: `I found a Counseling Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
         outputContexts: [{
@@ -176,6 +192,8 @@ const intentHandlers = {
       const professionalContext = outputContexts.find(c => 
         c.name.endsWith('selected_professional')
       );
+
+      console.log('Available contexts:', outputContexts);
       
       if (!professionalContext) {
         return {
