@@ -69,7 +69,7 @@ const intentHandlers = {
       return {
         fulfillmentText: `I found a Clinical Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
         outputContexts: [{
-          name: `${sessionPath}/contexts/selected_professional`,
+          name: `${req.body.session}/contexts/selected_professional`,
           lifespanCount: 5,
           parameters: {
             professional: randomProfessional,
@@ -151,7 +151,7 @@ const intentHandlers = {
       return {
         fulfillmentText: `I found a Counseling Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
         outputContexts: [{
-          name: `${sessionPath}/contexts/selected_professional`,
+          name: `${req.body.session}/contexts/selected_professional`,
           lifespanCount: 5,
           parameters: {
             professional: randomProfessional,
