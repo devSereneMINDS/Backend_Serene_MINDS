@@ -2,7 +2,7 @@ import sql from '../config/db.js';
 
 const AISENSY_URL = process.env.AISENSY_URL;
 const AISENSY_API_KEY = process.env.AISENSY_API_KEY?.trim();
-const BOOKING_BASE_URL = 'https://booking.sereneminds.com';
+const BOOKING_BASE_URL = 'https://booking.sereneminds.life';
 
 // Intent handler functions
 const intentHandlers = {
