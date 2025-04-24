@@ -3,6 +3,42 @@ import sql from '../config/db.js';
 const AISENSY_URL = process.env.AISENSY_URL;
 const AISENSY_API_KEY = process.env.AISENSY_API_KEY?.trim();
 const BOOKING_BASE_URL = 'https://booking.sereneminds.life';
+const DEFAULT_PROFESSIONAL_PHOTO = 'https://png.pngtree.com/png-vector/20240309/ourmid/pngtree-psychologist-vector-concept-color-illustration-png-image_11904992.png';
+
+// Shared utility functions
+const getRandomProfessional = async (areaOfExpertise) => {
+  const professionals = await sql`
+    SELECT * FROM professional 
+    WHERE area_of_expertise = ${areaOfExpertise}
+  `;
+  return professionals.length > 0 
+    ? professionals[Math.floor(Math.random() * professionals.length)]
+    : null;
+};
+
+const sendWhatsAppMessage = async (userPhone, payload) => {
+  if (!userPhone || !AISENSY_API_KEY) return;
+  
+  try {
+    const response = await fetch(AISENSY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        apiKey: AISENSY_API_KEY,
+        destination: userPhone.replace('+', ''),
+        userName: "Serene MINDS",
+        paramsFallbackValue: { FirstName: "there" },
+        ...payload
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('Aisensy API error:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending WhatsApp message:', error);
+  }
+};
 
 // Intent handler functions
 const intentHandlers = {
@@ -11,73 +47,43 @@ const intentHandlers = {
     const areaOfExpertise = 'Clinical Psychologist';
 
     try {
-      const professionals = await sql`
-        SELECT * FROM professional 
-        WHERE area_of_expertise = ${areaOfExpertise}
-      `;
-
-      if (professionals.length === 0) {
+      const professional = await getRandomProfessional(areaOfExpertise);
+      
+      if (!professional) {
         return {
           fulfillmentText: 'Sorry, no Clinical Psychologists found at the moment. Please try again later.',
         };
       }
 
-      const randomProfessional = professionals[Math.floor(Math.random() * professionals.length)];
-      const bookingLink = `${BOOKING_BASE_URL}/${randomProfessional.id}`;
+      const bookingLink = `${BOOKING_BASE_URL}/${professional.id}`;
+      const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
 
-      if (userPhone) {
-        try {
-          const aisensyPayload = {
-            apiKey: AISENSY_API_KEY,
-            campaignName: "suggestprofessional",
-            destination: userPhone.replace('+', ''),
-            userName: "Serene MINDS",
-            templateParams: [
-              randomProfessional.full_name,
-              randomProfessional.area_of_expertise || "Clinical Psychology",
-              "English, Hindi"
-            ],
-            media: randomProfessional.photo_url ? {
-              url: randomProfessional.photo_url,
-              filename: "professional_photo.jpg"
-            } : undefined,
-            paramsFallbackValue: {
-              FirstName: "there"
-            }
-          };
-
-          if (!randomProfessional.photo_url) {
-            delete aisensyPayload.media;
-          }
-
-          const response = await fetch(AISENSY_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(aisensyPayload),
-          });
-
-          if (!response.ok) {
-            console.error('Aisensy API error:', await response.text());
-          }
-        } catch (whatsappError) {
-          console.error('Error sending WhatsApp message:', whatsappError);
+      // Send WhatsApp message if phone available
+      await sendWhatsAppMessage(userPhone, {
+        campaignName: "suggestprofessional",
+        templateParams: [
+          professional.full_name,
+          professional.area_of_expertise || areaOfExpertise,
+          "English, Hindi"
+        ],
+        media: {
+          url: photoUrl,
+          filename: "professional_photo.jpg"
         }
-      }
+      });
 
       return {
-        fulfillmentText: `I found a Clinical Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
+        fulfillmentText: `I found a Clinical Psychologist: ${professional.full_name}. Would you like to know more about their services or availability?`,
         outputContexts: [{
           name: `${req.body.session}/contexts/selected_professional`,
           lifespanCount: 5,
           parameters: {
-            professional: randomProfessional,
-            bookingLink: bookingLink,
-            area_of_expertise: areaOfExpertise // Store expertise in context
+            professional,
+            bookingLink,
+            area_of_expertise: areaOfExpertise
           }
         }],
-        payload: {
-          professional: randomProfessional,
-        },
+        payload: { professional }
       };
     } catch (error) {
       console.error('Error fetching Clinical Psychologist:', error);
@@ -92,73 +98,43 @@ const intentHandlers = {
     const areaOfExpertise = 'Counseling Psychologist';
 
     try {
-      const professionals = await sql`
-        SELECT * FROM professional 
-        WHERE area_of_expertise = ${areaOfExpertise}
-      `;
-
-      if (professionals.length === 0) {
+      const professional = await getRandomProfessional(areaOfExpertise);
+      
+      if (!professional) {
         return {
           fulfillmentText: 'Sorry, no Counseling Psychologists found at the moment. Please try again later.',
         };
       }
 
-      const randomProfessional = professionals[Math.floor(Math.random() * professionals.length)];
-      const bookingLink = `${BOOKING_BASE_URL}/${randomProfessional.id}`;
+      const bookingLink = `${BOOKING_BASE_URL}/${professional.id}`;
+      const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
 
-      if (userPhone) {
-        try {
-          const aisensyPayload = {
-            apiKey: AISENSY_API_KEY,
-            campaignName: "suggestprofessional",
-            destination: userPhone.replace('+', ''),
-            userName: "Serene MINDS",
-            templateParams: [
-              randomProfessional.full_name,
-              randomProfessional.area_of_expertise || "Counseling Psychology",
-              "English, Hindi"
-            ],
-            media: randomProfessional.photo_url ? {
-              url: randomProfessional.photo_url,
-              filename: "professional_photo.jpg"
-            } : undefined,
-            paramsFallbackValue: {
-              FirstName: "there"
-            }
-          };
-
-          if (!randomProfessional.photo_url) {
-            delete aisensyPayload.media;
-          }
-
-          const response = await fetch(AISENSY_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(aisensyPayload),
-          });
-
-          if (!response.ok) {
-            console.error('Aisensy API error:', await response.text());
-          }
-        } catch (whatsappError) {
-          console.error('Error sending WhatsApp message:', whatsappError);
+      // Send WhatsApp message if phone available
+      await sendWhatsAppMessage(userPhone, {
+        campaignName: "suggestprofessional",
+        templateParams: [
+          professional.full_name,
+          professional.area_of_expertise || areaOfExpertise,
+          "English, Hindi"
+        ],
+        media: {
+          url: photoUrl,
+          filename: "professional_photo.jpg"
         }
-      }
+      });
 
       return {
-        fulfillmentText: `I found a Counseling Psychologist: ${randomProfessional.full_name}. Would you like to know more about their services or availability?`,
+        fulfillmentText: `I found a Counseling Psychologist: ${professional.full_name}. Would you like to know more about their services or availability?`,
         outputContexts: [{
           name: `${req.body.session}/contexts/selected_professional`,
           lifespanCount: 5,
           parameters: {
-            professional: randomProfessional,
-            bookingLink: bookingLink,
-            area_of_expertise: areaOfExpertise // Store expertise in context
+            professional,
+            bookingLink,
+            area_of_expertise: areaOfExpertise
           }
         }],
-        payload: {
-          professional: randomProfessional,
-        },
+        payload: { professional }
       };
     } catch (error) {
       console.error('Error fetching Counseling Psychologist:', error);
@@ -184,56 +160,17 @@ const intentHandlers = {
       const professional = professionalContext.parameters.professional;
       const bookingLink = professionalContext.parameters.bookingLink || 
                          `${BOOKING_BASE_URL}/${professional.id}`;
+      const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
 
-      if (userPhone) {
-        try {
-          await fetch(AISENSY_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              apiKey: AISENSY_API_KEY,
-              campaignName: "sendbookinglink",
-              destination: userPhone.replace('+', ''),
-              userName: "Serene MINDS",
-              templateParams: [
-                professional.full_name,
-                bookingLink
-              ],
-              media: professional.photo_url ? {
-                url: professional.photo_url,
-                filename: "professional_photo.jpg"
-              } : undefined
-            })
-          });
-        } catch (error) {
-          console.error('WhatsApp send error:', error);
-        }
-      }
+      // Send WhatsApp message if phone available
+      await sendWhatsAppMessage(userPhone, {
+        campaignName: "sendbookinglink",
+        templateParams: [professional.full_name, bookingLink],
+        media: { url: photoUrl, filename: "professional_photo.jpg" }
+      });
 
       return {
-        fulfillmentText: `Here's the booking link for Dr. ${professional.full_name}`,
-        fulfillmentMessages: [
-          {
-            text: {
-              text: [
-                `Book your session with Dr. ${professional.full_name}:`
-              ]
-            }
-          },
-          {
-            payload: {
-              richContent: [
-                [
-                  {
-                    type: "button",
-                    text: "Book Now",
-                    link: bookingLink
-                  }
-                ]
-              ]
-            }
-          }
-        ]
+        fulfillmentText: `Here's the booking link for Dr. ${professional.full_name}: ${bookingLink}`,
       };
     } catch (error) {
       console.error('Error:', error);
@@ -287,16 +224,17 @@ const intentHandlers = {
 // Main Dialogflow webhook handler
 export async function dialogflowWebhook(req, res) {
   try {
-    console.log('Dialogflow Request Body:', JSON.stringify(req.body, null, 2));
     const { queryResult, originalDetectIntentRequest, outputContexts = [] } = req.body;
     const intentName = queryResult.intent.displayName;
 
+    // Normalize phone number
     let userPhone = originalDetectIntentRequest?.payload?.AiSensyMobileNumber;
     if (userPhone) {
       userPhone = userPhone.replace(/\D/g, '');
       if (userPhone.startsWith('0')) userPhone = '91' + userPhone.substring(1);
     }
 
+    // Route to appropriate handler
     const handler = intentHandlers[intentName] || intentHandlers['Default Fallback Intent'];
     const response = await handler(queryResult, userPhone, outputContexts, req);
 
