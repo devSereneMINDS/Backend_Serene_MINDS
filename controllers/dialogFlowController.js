@@ -73,7 +73,9 @@ const intentHandlers = {
       });
 
       return {
-        fulfillmentText: `I found a Clinical Psychologist: ${professional.full_name}. Would you like to know more about their services or availability?`,
+                fulfillmentText: `I found a Counselling Psychologist, ${professional.full_name}.
+        
+                Sending you profile...`,
         outputContexts: [{
           name: `${req.body.session}/contexts/selected_professional`,
           lifespanCount: 5,
@@ -124,7 +126,9 @@ const intentHandlers = {
       });
 
       return {
-        fulfillmentText: `I found a Counseling Psychologist: ${professional.full_name}. Would you like to know more about their services or availability?`,
+        fulfillmentText: `I found a Counselling Psychologist, ${professional.full_name}.
+
+        Sending you profile...`,
         outputContexts: [{
           name: `${req.body.session}/contexts/selected_professional`,
           lifespanCount: 5,
