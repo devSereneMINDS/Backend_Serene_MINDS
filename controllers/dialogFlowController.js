@@ -126,8 +126,8 @@ const intentHandlers = {
       });
 
       return {
-        fulfillmentText: `I found a Counselling Psychologist, ${professional.full_name}.
-
+        fulfillmentText: `I found a Counseling Psychologist: Aditi Bansal.
+        
         Sending you profile...`,
         outputContexts: [{
           name: `${req.body.session}/contexts/selected_professional`,
