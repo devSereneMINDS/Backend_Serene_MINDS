@@ -128,7 +128,7 @@ const intentHandlers = {
       return {
         fulfillmentText: `I found a Counseling Psychologist: Aditi Bansal.
         
-        Sending you profile...`,
+  Sending you profile...`,
         outputContexts: [{
           name: `${req.body.session}/contexts/selected_professional`,
           lifespanCount: 5,
