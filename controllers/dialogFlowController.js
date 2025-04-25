@@ -42,6 +42,178 @@ const sendWhatsAppMessage = async (userPhone, payload) => {
 
 // Intent handler functions
 const intentHandlers = {
+  'Default Welcome Intent': async (queryResult, userPhone, outputContexts = [], req) => {
+    try {
+      // Get user phone number from request
+      const phone = userPhone.replace(/\D/g, '');
+      
+      // Check if user exists in database
+      const existingUser = await sql`
+        SELECT * FROM users 
+        WHERE phone = ${phone}
+        LIMIT 1
+      `;
+
+      if (existingUser.length > 0) {
+        // Existing user flow
+        try {
+          await sendWhatsAppMessage({
+            campaignName: "welcome_back",
+            destination: phone,
+            templateParams: [
+              existingUser[0].name,
+              "We're here to support your mental health journey"
+            ]
+          });
+        } catch (error) {
+          console.error('WhatsApp send error:', error);
+        }
+
+        return {
+          fulfillmentText: `Welcome back, ${existingUser[0].name}! How can we help you today?`,
+          outputContexts: [{
+            name: `${req.body.session}/contexts/known_user`,
+            lifespanCount: 5,
+            parameters: {
+              user: existingUser[0],
+              isExistingUser: true
+            }
+          }]
+        };
+      } else {
+        // New user flow
+        return {
+          fulfillmentText: 'Welcome to Serene MINDS. To get started, could you please tell me your name?',
+          outputContexts: [{
+            name: `${req.body.session}/contexts/collect_user_info`,
+            lifespanCount: 5,
+            parameters: {
+              isExistingUser: false,
+              step: 'collect_name'
+            }
+          }]
+        };
+      }
+    } catch (error) {
+      console.error('Error in welcome intent:', error);
+      return {
+        fulfillmentText: 'Welcome! Something went wrong. Please try again.'
+      };
+    }
+  },
+
+  // Collect user information step 1 - Name
+  'getUserName': async (queryResult, userPhone, outputContexts = [], req) => {
+    const name = queryResult.parameters['name'];
+    
+    return {
+      fulfillmentText: `Thanks ${name}. Could you share your age?`,
+      outputContexts: [{
+        name: `${req.body.session}/contexts/collect_user_info`,
+        lifespanCount: 5,
+        parameters: {
+          name: name,
+          step: 'collect_age'
+        }
+      }]
+    };
+  },
+
+  // Collect user information step 2 - Age
+  'getUserAge': async (queryResult, userPhone, outputContexts = [], req) => {
+    const age = queryResult.parameters['age'];
+    const context = outputContexts.find(c => c.name.includes('collect_user_info'));
+    
+    return {
+      fulfillmentText: `Got it. What city are you located in?`,
+      outputContexts: [{
+        name: `${req.body.session}/contexts/collect_user_info`,
+        lifespanCount: 5,
+        parameters: {
+          ...context?.parameters,
+          age: age,
+          step: 'collect_location'
+        }
+      }]
+    };
+  },
+
+  // Collect user information step 3 - Location
+  'getUserLocation': async (queryResult, userPhone, outputContexts = [], req) => {
+    const location = queryResult.parameters['location'];
+    const context = outputContexts.find(c => c.name.includes('collect_user_info'));
+    
+    return {
+      fulfillmentText: `Thank you. Could you briefly describe what you're struggling with?`,
+      outputContexts: [{
+        name: `${req.body.session}/contexts/collect_user_info`,
+        lifespanCount: 5,
+        parameters: {
+          ...context?.parameters,
+          location: location,
+          step: 'collect_problem'
+        }
+      }]
+    };
+  },
+
+  // Collect user information step 4 - Problem
+  'getUserProblem': async (queryResult, userPhone, outputContexts = [], req) => {
+    const problem = queryResult.queryText;
+    const context = outputContexts.find(c => c.name.includes('collect_user_info'));
+    
+    try {
+      // Save new user to database
+      const newUser = await sql`
+        INSERT INTO users (
+          name, 
+          age, 
+          location, 
+          problem_description,
+          phone,
+          created_at
+        ) VALUES (
+          ${context?.parameters?.name},
+          ${context?.parameters?.age},
+          ${context?.parameters?.location},
+          ${problem},
+          ${userPhone.replace(/\D/g, '')},
+          NOW()
+        ) RETURNING *
+      `;
+
+      // Send welcome message via WhatsApp
+      try {
+        await sendWhatsAppMessage({
+          campaignName: "new_user_welcome",
+          destination: userPhone.replace(/\D/g, ''),
+          templateParams: [
+            newUser[0].name,
+            "We're here to support you"
+          ]
+        });
+      } catch (error) {
+        console.error('WhatsApp send error:', error);
+      }
+
+      return {
+        fulfillmentText: `Thank you for sharing. We'll match you with the right professional. How can we help?`,
+        outputContexts: [{
+          name: `${req.body.session}/contexts/known_user`,
+          lifespanCount: 5,
+          parameters: {
+            user: newUser[0],
+            isExistingUser: true
+          }
+        }]
+      };
+    } catch (error) {
+      console.error('Error saving user:', error);
+      return {
+        fulfillmentText: 'Sorry, something went wrong while saving your information. Please try again.'
+      };
+    }
+  },
   // Intent to get a random Clinical Psychologist
   'getClinicalProfessional': async (queryResult, userPhone, outputContexts = [], req) => {
     const areaOfExpertise = 'Clinical Psychologist';
