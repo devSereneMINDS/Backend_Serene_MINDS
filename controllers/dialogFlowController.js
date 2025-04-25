@@ -17,7 +17,15 @@ const getRandomProfessional = async (areaOfExpertise) => {
 };
 
 const sendWhatsAppMessage = async (userPhone, payload) => {
-  if (!userPhone || !AISENSY_API_KEY) return;
+  if (!userPhone) {
+    console.error('No phone number provided to sendWhatsAppMessage');
+    return;
+  }
+  
+  if (!AISENSY_API_KEY) {
+    console.error('AISENSY_API_KEY is not configured');
+    return;
+  }
   
   try {
     const response = await fetch(AISENSY_URL, {
@@ -43,9 +51,12 @@ const sendWhatsAppMessage = async (userPhone, payload) => {
 // Intent handler functions
 const intentHandlers = {
   'Default Welcome Intent': async (queryResult, userPhone, outputContexts = [], req) => {
+    console.log('Default Welcome Intent triggered'); 
+    console.log('User phone:', userPhone);
     try {
       // Get user phone number from request
       const phone = userPhone.replace(/\D/g, '');
+      console.log('Normalized phone:', phone);
       
       // Check if user exists in database
       const existingUser = await sql`
@@ -448,6 +459,9 @@ export async function dialogflowWebhook(req, res) {
   try {
     const { queryResult, originalDetectIntentRequest, outputContexts = [] } = req.body;
     const intentName = queryResult.intent.displayName;
+
+    console.log(`Triggered intent: ${intentName}`);
+    console.log('Available contexts:', outputContexts.map(c => c.name));
 
     // Normalize phone number
     let userPhone = originalDetectIntentRequest?.payload?.AiSensyMobileNumber;
