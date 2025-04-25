@@ -49,8 +49,8 @@ const intentHandlers = {
       
       // Check if user exists in database
       const existingUser = await sql`
-        SELECT * FROM users 
-        WHERE phone = ${phone}
+        SELECT * FROM client 
+        WHERE phone_no = ${phone}
         LIMIT 1
       `;
 
@@ -58,11 +58,10 @@ const intentHandlers = {
         // Existing user flow
         try {
           await sendWhatsAppMessage({
-            campaignName: "welcome_back",
+            campaignName: "welcometext",
             destination: phone,
             templateParams: [
               existingUser[0].name,
-              "We're here to support your mental health journey"
             ]
           });
         } catch (error) {
@@ -165,12 +164,11 @@ const intentHandlers = {
     try {
       // Save new user to database
       const newUser = await sql`
-        INSERT INTO users (
+        INSERT INTO client (
           name, 
           age, 
-          location, 
-          problem_description,
-          phone,
+          city, 
+          phone_no,
           created_at
         ) VALUES (
           ${context?.parameters?.name},
@@ -185,11 +183,10 @@ const intentHandlers = {
       // Send welcome message via WhatsApp
       try {
         await sendWhatsAppMessage({
-          campaignName: "new_user_welcome",
+          campaignName: "welcometext",
           destination: userPhone.replace(/\D/g, ''),
           templateParams: [
             newUser[0].name,
-            "We're here to support you"
           ]
         });
       } catch (error) {
