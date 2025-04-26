@@ -326,14 +326,14 @@ const intentHandlers = {
 
   // Intent to get a random Wellness Associate
 'getScholarProfessional': async (queryResult, userPhone, outputContexts = [], req) => {
-  const areaOfExpertise = 'Wellness Associate';
+  const areaOfExpertise = 'Wellness Buddy';
 
   try {
     const professional = await getRandomProfessional(areaOfExpertise);
     
     if (!professional) {
       return {
-        fulfillmentText: 'Sorry, no Wellness Associates found at the moment. Please try again later.',
+        fulfillmentText: 'Sorry, no Wellness Buddy found at the moment. Please try again later.',
       };
     }
 
@@ -355,7 +355,7 @@ const intentHandlers = {
     });
 
     return {
-      fulfillmentText: `I found a Wellness Associate, ${professional.full_name}.\n\nSending you profile...`,
+      fulfillmentText: `I found a Wellness Buddy, ${professional.full_name}.\n\nSending you profile...`,
       outputContexts: [{
         name: `${req.body.session}/contexts/selected_professional`,
         lifespanCount: 5,
@@ -368,9 +368,9 @@ const intentHandlers = {
       payload: { professional }
     };
   } catch (error) {
-    console.error('Error fetching Wellness Associate:', error);
+    console.error('Error fetching Wellness Buddy:', error);
     return {
-      fulfillmentText: 'Sorry, something went wrong while fetching a Wellness Associate. Please try again later.',
+      fulfillmentText: 'Sorry, something went wrong while fetching a Wellness Buddy. Please try again later.',
     };
   }
 },
