@@ -400,9 +400,7 @@ const intentHandlers = {
         media: { url: photoUrl, filename: "professional_photo.jpg" }
       });
 
-      return {
-        fulfillmentText: `Here's the booking link for Dr. ${professional.full_name}: ${bookingLink}`,
-      };
+      return {};
     } catch (error) {
       console.error('Error:', error);
       return {
