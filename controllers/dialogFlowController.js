@@ -113,6 +113,27 @@ const intentHandlers = {
     }
   },
 
+  'needToTalkSomeone': async (queryResult, userPhone, outputContexts = [], req) => {
+  try {
+    if (!userPhone) {
+      console.error('No phone number available to send message');
+      return {};
+    }
+
+    // Send WhatsApp message with the catalogue template
+    await sendWhatsAppMessage(userPhone, {
+      campaignName: "dialogflow_catalogue",
+      templateParams: [] // No parameters needed for this template
+    });
+
+    // Return empty response since we're just sending a message
+    return {};
+  } catch (error) {
+    console.error('Error in needToTalkSomeone intent:', error);
+    return {}; // Still return empty to avoid showing error to user
+  }
+},
+
   // Collect user information step 1 - Name
   'getUserName': async (queryResult, userPhone, outputContexts = [], req) => {
     try {
