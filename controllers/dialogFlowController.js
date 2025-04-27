@@ -494,37 +494,32 @@ const intentHandlers = {
   // Intent to suggest another professional of same type
   'suggestAnotherProfessional': async (queryResult, userPhone, outputContexts = [], req) => {
     try {
-      const professionalContext = 
-        outputContexts.find(c => c.name.includes('selected_professional')) ||
-        req.body.queryResult.outputContexts?.find(c => c.name.includes('selected_professional'));
+        const professionalContext = 
+            outputContexts.find(c => c.name.includes('selected_professional')) ||
+            req.body.queryResult.outputContexts?.find(c => c.name.includes('selected_professional'));
 
-      if (!professionalContext) {
-        return {
-          fulfillmentText: 'Please ask for a professional recommendation first.',
-        };
-      }
+        let areaOfExpertise = 'Wellness Buddy'; // Default value
+        
+        if (professionalContext) {
+            areaOfExpertise = professionalContext.parameters.area_of_expertise || 'Wellness Buddy';
+        }
 
-      const areaOfExpertise = professionalContext.parameters.area_of_expertise;
-      
-      // Call the appropriate handler based on previous expertise
-      if (areaOfExpertise === 'Clinical Psychologist') {
-        return intentHandlers['getClinicalProfessional'](queryResult, userPhone, outputContexts, req);
-      } else if (areaOfExpertise === 'Counseling Psychologist') {
-        return intentHandlers['getCounselingProfessional'](queryResult, userPhone, outputContexts, req);
-      } else if (areaOfExpertise === 'Wellness Buddy') {
-        return intentHandlers['getScholarProfessional'](queryResult, userPhone, outputContexts, req);
-      } else {
-        return {
-          fulfillmentText: 'Sorry, I cannot suggest another professional at this time.'
-        };
-      }
+        // Call the appropriate handler based on expertise
+        if (areaOfExpertise === 'Clinical Psychologist') {
+            return intentHandlers['getClinicalProfessional'](queryResult, userPhone, outputContexts, req);
+        } else if (areaOfExpertise === 'Counseling Psychologist') {
+            return intentHandlers['getCounselingProfessional'](queryResult, userPhone, outputContexts, req);
+        } else {
+            // Default to Wellness Buddy if no specific expertise found
+            return intentHandlers['getScholarProfessional'](queryResult, userPhone, outputContexts, req);
+        }
     } catch (error) {
-      console.error('Error suggesting another professional:', error);
-      return {
-        fulfillmentText: 'Sorry, something went wrong while finding another professional. Please try again later.',
-      };
+        console.error('Error suggesting another professional:', error);
+        return {
+            fulfillmentText: 'Sorry, something went wrong while finding another professional. Please try again later.',
+        };
     }
-  },
+},
 
   // Default fallback intent
   'Default Fallback Intent': async () => {
