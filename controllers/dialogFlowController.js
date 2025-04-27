@@ -7,18 +7,23 @@ const DEFAULT_PROFESSIONAL_PHOTO = 'https://png.pngtree.com/png-vector/20240309/
 
 // Shared utility functions
 const getRandomProfessional = async (areaOfExpertise) => {
-  const professionals = await sql`
-    SELECT * FROM professional 
-    WHERE area_of_expertise = ${areaOfExpertise}
-  `;
-  return professionals.length > 0 
-    ? professionals[Math.floor(Math.random() * professionals.length)]
-    : null;
+  try {
+    const professionals = await sql`
+      SELECT * FROM professional 
+      WHERE area_of_expertise = ${areaOfExpertise}
+    `;
+    return professionals.length > 0 
+      ? professionals[Math.floor(Math.random() * professionals.length)]
+      : null;
+  } catch (error) {
+    console.error('Error fetching professionals:', error);
+    return null;
+  }
 };
 
 const sendWhatsAppMessage = async (userPhone, payload) => {
-  if (!userPhone) {
-    console.error('No phone number provided to sendWhatsAppMessage');
+  if (!userPhone || typeof userPhone !== 'string') {
+    console.error('Invalid phone number provided to sendWhatsAppMessage');
     return;
   }
   
@@ -28,12 +33,13 @@ const sendWhatsAppMessage = async (userPhone, payload) => {
   }
   
   try {
+    const cleanPhone = userPhone.replace(/\D/g, '');
     const response = await fetch(AISENSY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         apiKey: AISENSY_API_KEY,
-        destination: userPhone.replace('+', ''),
+        destination: cleanPhone.replace('+', ''),
         userName: "Serene MINDS",
         paramsFallbackValue: { FirstName: "there" },
         ...payload
@@ -41,10 +47,14 @@ const sendWhatsAppMessage = async (userPhone, payload) => {
     });
     
     if (!response.ok) {
-      console.error('Aisensy API error:', await response.text());
+      const errorText = await response.text();
+      console.error('Aisensy API error:', errorText);
+      throw new Error(`Aisensy API error: ${errorText}`);
     }
+    return true;
   } catch (error) {
     console.error('Error sending WhatsApp message:', error);
+    throw error;
   }
 };
 
@@ -53,8 +63,12 @@ const intentHandlers = {
   'welcomeIntent': async (queryResult, userPhone, outputContexts = [], req) => {
     console.log('Default Welcome Intent triggered'); 
     console.log('User phone:', userPhone);
+    
     try {
-      // Get user phone number from request
+      if (!userPhone) {
+        throw new Error('No phone number provided');
+      }
+
       const phone = userPhone.replace(/\D/g, '');
       console.log('Normalized phone:', phone);
       
@@ -68,12 +82,9 @@ const intentHandlers = {
       if (existingUser.length > 0) {
         // Existing user flow
         try {
-          await sendWhatsAppMessage({
+          await sendWhatsAppMessage(phone, {
             campaignName: "dialogflow_welcometext",
-            destination: phone,
-            templateParams: [
-              existingUser[0].name,
-            ]
+            templateParams: [existingUser[0].name]
           });
         } catch (error) {
           console.error('WhatsApp send error:', error);
@@ -114,65 +125,104 @@ const intentHandlers = {
 
   // Collect user information step 1 - Name
   'getUserName': async (queryResult, userPhone, outputContexts = [], req) => {
-    const name = queryResult.parameters['name'];
-    
-    return {
-      fulfillmentText: `Thanks ${name}. Could you share your age?`,
-      outputContexts: [{
-        name: `${req.body.session}/contexts/collect_user_info`,
-        lifespanCount: 5,
-        parameters: {
-          name: name,
-          step: 'collect_age'
-        }
-      }]
-    };
+    try {
+      const name = queryResult.parameters['name'];
+      if (!name) {
+        throw new Error('No name provided');
+      }
+      
+      return {
+        fulfillmentText: `Thanks ${name}. Could you share your age?`,
+        outputContexts: [{
+          name: `${req.body.session}/contexts/collect_user_info`,
+          lifespanCount: 5,
+          parameters: {
+            name: name,
+            step: 'collect_age'
+          }
+        }]
+      };
+    } catch (error) {
+      console.error('Error in getUserName:', error);
+      return {
+        fulfillmentText: 'Sorry, I didn\'t get your name. Could you please tell me your name again?'
+      };
+    }
   },
 
   // Collect user information step 2 - Age
   'getUserAge': async (queryResult, userPhone, outputContexts = [], req) => {
-    const age = queryResult.parameters['age'];
-    const context = outputContexts.find(c => c.name.includes('collect_user_info'));
-    
-    return {
-      fulfillmentText: `Got it. What city are you located in?`,
-      outputContexts: [{
-        name: `${req.body.session}/contexts/collect_user_info`,
-        lifespanCount: 5,
-        parameters: {
-          ...context?.parameters,
-          age: age,
-          step: 'collect_location'
-        }
-      }]
-    };
+    try {
+      const age = queryResult.parameters['age'];
+      if (!age) {
+        throw new Error('No age provided');
+      }
+
+      const context = outputContexts.find(c => c.name.includes('collect_user_info'));
+      
+      return {
+        fulfillmentText: `Got it. What city are you located in?`,
+        outputContexts: [{
+          name: `${req.body.session}/contexts/collect_user_info`,
+          lifespanCount: 5,
+          parameters: {
+            ...context?.parameters,
+            age: age,
+            step: 'collect_location'
+          }
+        }]
+      };
+    } catch (error) {
+      console.error('Error in getUserAge:', error);
+      return {
+        fulfillmentText: 'Sorry, I didn\'t get your age. Could you please tell me your age again?'
+      };
+    }
   },
 
   // Collect user information step 3 - Location
   'getUserLocation': async (queryResult, userPhone, outputContexts = [], req) => {
-    const location = queryResult.parameters['location'];
-    const context = outputContexts.find(c => c.name.includes('collect_user_info'));
-    
-    return {
-      fulfillmentText: `Thank you. Could you briefly describe what you're struggling with?`,
-      outputContexts: [{
-        name: `${req.body.session}/contexts/collect_user_info`,
-        lifespanCount: 5,
-        parameters: {
-          ...context?.parameters,
-          location: location,
-          step: 'collect_problem'
-        }
-      }]
-    };
+    try {
+      const location = queryResult.parameters['location'];
+      if (!location) {
+        throw new Error('No location provided');
+      }
+
+      const context = outputContexts.find(c => c.name.includes('collect_user_info'));
+      
+      return {
+        fulfillmentText: `Thank you. Could you briefly describe what you're struggling with?`,
+        outputContexts: [{
+          name: `${req.body.session}/contexts/collect_user_info`,
+          lifespanCount: 5,
+          parameters: {
+            ...context?.parameters,
+            location: location,
+            step: 'collect_problem'
+          }
+        }]
+      };
+    } catch (error) {
+      console.error('Error in getUserLocation:', error);
+      return {
+        fulfillmentText: 'Sorry, I didn\'t get your location. Could you please tell me your city again?'
+      };
+    }
   },
 
   // Collect user information step 4 - Problem
   'getUserProblem': async (queryResult, userPhone, outputContexts = [], req) => {
-    const problem = queryResult.queryText;
-    const context = outputContexts.find(c => c.name.includes('collect_user_info'));
-    
     try {
+      const problem = queryResult.queryText;
+      if (!problem) {
+        throw new Error('No problem description provided');
+      }
+
+      const context = outputContexts.find(c => c.name.includes('collect_user_info'));
+      if (!context) {
+        throw new Error('Missing user context');
+      }
+
       // Save new user to database
       const newUser = await sql`
         INSERT INTO client (
@@ -185,7 +235,6 @@ const intentHandlers = {
           ${context?.parameters?.name},
           ${context?.parameters?.age},
           ${context?.parameters?.location},
-          ${problem},
           ${userPhone.replace(/\D/g, '')},
           NOW()
         ) RETURNING *
@@ -193,12 +242,9 @@ const intentHandlers = {
 
       // Send welcome message via WhatsApp
       try {
-        await sendWhatsAppMessage({
+        await sendWhatsAppMessage(userPhone, {
           campaignName: "welcometext",
-          destination: userPhone.replace(/\D/g, ''),
-          templateParams: [
-            newUser[0].name,
-          ]
+          templateParams: [newUser[0].name]
         });
       } catch (error) {
         console.error('WhatsApp send error:', error);
@@ -222,6 +268,7 @@ const intentHandlers = {
       };
     }
   },
+
   // Intent to get a random Clinical Psychologist
   'getClinicalProfessional': async (queryResult, userPhone, outputContexts = [], req) => {
     const areaOfExpertise = 'Clinical Psychologist';
@@ -239,18 +286,24 @@ const intentHandlers = {
       const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
 
       // Send WhatsApp message if phone available
-      await sendWhatsAppMessage(userPhone, {
-        campaignName: "suggestprofessional",
-        templateParams: [
-          professional.full_name,
-          professional.area_of_expertise || areaOfExpertise,
-          "English, Hindi"
-        ],
-        media: {
-          url: photoUrl,
-          filename: "professional_photo.jpg"
+      if (userPhone) {
+        try {
+          await sendWhatsAppMessage(userPhone, {
+            campaignName: "suggestprofessional",
+            templateParams: [
+              professional.full_name,
+              professional.area_of_expertise || areaOfExpertise,
+              "English, Hindi"
+            ],
+            media: {
+              url: photoUrl,
+              filename: "professional_photo.jpg"
+            }
+          });
+        } catch (error) {
+          console.error('Error sending WhatsApp message:', error);
         }
-      });
+      }
 
       return {
         fulfillmentText: `I found a Clinical Psychologist, ${professional.full_name}.\n\nSending you profile...`,
@@ -290,18 +343,24 @@ const intentHandlers = {
       const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
 
       // Send WhatsApp message if phone available
-      await sendWhatsAppMessage(userPhone, {
-        campaignName: "suggestprofessional",
-        templateParams: [
-          professional.full_name,
-          professional.area_of_expertise || areaOfExpertise,
-          "English, Hindi"
-        ],
-        media: {
-          url: photoUrl,
-          filename: "professional_photo.jpg"
+      if (userPhone) {
+        try {
+          await sendWhatsAppMessage(userPhone, {
+            campaignName: "suggestprofessional",
+            templateParams: [
+              professional.full_name,
+              professional.area_of_expertise || areaOfExpertise,
+              "English, Hindi"
+            ],
+            media: {
+              url: photoUrl,
+              filename: "professional_photo.jpg"
+            }
+          });
+        } catch (error) {
+          console.error('Error sending WhatsApp message:', error);
         }
-      });
+      }
 
       return {
         fulfillmentText: `I found a Counselling Psychologist, ${professional.full_name}.\n\nSending you profile...`,
@@ -325,55 +384,61 @@ const intentHandlers = {
   },
 
   // Intent to get a random Wellness Associate
-'getScholarProfessional': async (queryResult, userPhone, outputContexts = [], req) => {
-  const areaOfExpertise = 'Wellness Buddy';
+  'getScholarProfessional': async (queryResult, userPhone, outputContexts = [], req) => {
+    const areaOfExpertise = 'Wellness Buddy';
 
-  try {
-    const professional = await getRandomProfessional(areaOfExpertise);
-    
-    if (!professional) {
+    try {
+      const professional = await getRandomProfessional(areaOfExpertise);
+      
+      if (!professional) {
+        return {
+          fulfillmentText: 'Sorry, no Wellness Buddy found at the moment. Please try again later.',
+        };
+      }
+
+      const bookingLink = `${BOOKING_BASE_URL}/${professional.id}`;
+      const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
+
+      // Send WhatsApp message if phone available
+      if (userPhone) {
+        try {
+          await sendWhatsAppMessage(userPhone, {
+            campaignName: "suggestprofessional",
+            templateParams: [
+              professional.full_name,
+              professional.area_of_expertise || areaOfExpertise,
+              "English, Hindi"
+            ],
+            media: {
+              url: photoUrl,
+              filename: "professional_photo.jpg"
+            }
+          });
+        } catch (error) {
+          console.error('Error sending WhatsApp message:', error);
+        }
+      }
+
       return {
-        fulfillmentText: 'Sorry, no Wellness Buddy found at the moment. Please try again later.',
+        fulfillmentText: `I found a Wellness Buddy, ${professional.full_name}.\n\nSending you profile...`,
+        outputContexts: [{
+          name: `${req.body.session}/contexts/selected_professional`,
+          lifespanCount: 5,
+          parameters: {
+            professional,
+            bookingLink,
+            area_of_expertise: areaOfExpertise
+          }
+        }],
+        payload: { professional }
+      };
+    } catch (error) {
+      console.error('Error fetching Wellness Buddy:', error);
+      return {
+        fulfillmentText: 'Sorry, something went wrong while fetching a Wellness Buddy. Please try again later.',
       };
     }
-
-    const bookingLink = `${BOOKING_BASE_URL}/${professional.id}`;
-    const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
-
-    // Send WhatsApp message if phone available
-    await sendWhatsAppMessage(userPhone, {
-      campaignName: "suggestprofessional",
-      templateParams: [
-        professional.full_name,
-        professional.area_of_expertise || areaOfExpertise,
-        "English, Hindi"
-      ],
-      media: {
-        url: photoUrl,
-        filename: "professional_photo.jpg"
-      }
-    });
-
-    return {
-      fulfillmentText: `I found a Wellness Buddy, ${professional.full_name}.\n\nSending you profile...`,
-      outputContexts: [{
-        name: `${req.body.session}/contexts/selected_professional`,
-        lifespanCount: 5,
-        parameters: {
-          professional,
-          bookingLink,
-          area_of_expertise: areaOfExpertise
-        }
-      }],
-      payload: { professional }
-    };
-  } catch (error) {
-    console.error('Error fetching Wellness Buddy:', error);
-    return {
-      fulfillmentText: 'Sorry, something went wrong while fetching a Wellness Buddy. Please try again later.',
-    };
-  }
-},
+  },
 
   // Intent to provide booking link for psychologist
   'bookPsychologistSession': async (queryResult, userPhone, outputContexts = [], req) => {
@@ -394,13 +459,28 @@ const intentHandlers = {
       const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
 
       // Send WhatsApp message if phone available
-      await sendWhatsAppMessage(userPhone, {
-        campaignName: "sendbookinglink",
-        templateParams: [professional.full_name, bookingLink],
-        media: { url: photoUrl, filename: "professional_photo.jpg" }
-      });
+      if (userPhone) {
+        try {
+          await sendWhatsAppMessage(userPhone, {
+            campaignName: "sendbookinglink",
+            templateParams: [professional.full_name, bookingLink],
+            media: { url: photoUrl, filename: "professional_photo.jpg" }
+          });
+        } catch (error) {
+          console.error('Error sending WhatsApp message:', error);
+        }
+      }
 
-      return {};
+      return {
+        fulfillmentText: `I've sent the booking link for ${professional.full_name} to your WhatsApp.`,
+        outputContexts: [{
+          name: `${req.body.session}/contexts/selected_professional`,
+          lifespanCount: 5,
+          parameters: {
+            ...professionalContext.parameters
+          }
+        }]
+      };
     } catch (error) {
       console.error('Error:', error);
       return {
@@ -411,38 +491,38 @@ const intentHandlers = {
 
   // Intent to suggest another professional of same type
   'suggestAnotherProfessional': async (queryResult, userPhone, outputContexts = [], req) => {
-  try {
-    const professionalContext = 
-      outputContexts.find(c => c.name.includes('selected_professional')) ||
-      req.body.queryResult.outputContexts?.find(c => c.name.includes('selected_professional'));
+    try {
+      const professionalContext = 
+        outputContexts.find(c => c.name.includes('selected_professional')) ||
+        req.body.queryResult.outputContexts?.find(c => c.name.includes('selected_professional'));
 
-    if (!professionalContext) {
+      if (!professionalContext) {
+        return {
+          fulfillmentText: 'Please ask for a professional recommendation first.',
+        };
+      }
+
+      const areaOfExpertise = professionalContext.parameters.area_of_expertise;
+      
+      // Call the appropriate handler based on previous expertise
+      if (areaOfExpertise === 'Clinical Psychologist') {
+        return intentHandlers['getClinicalProfessional'](queryResult, userPhone, outputContexts, req);
+      } else if (areaOfExpertise === 'Counseling Psychologist') {
+        return intentHandlers['getCounselingProfessional'](queryResult, userPhone, outputContexts, req);
+      } else if (areaOfExpertise === 'Wellness Buddy') {
+        return intentHandlers['getScholarProfessional'](queryResult, userPhone, outputContexts, req);
+      } else {
+        return {
+          fulfillmentText: 'Sorry, I cannot suggest another professional at this time.'
+        };
+      }
+    } catch (error) {
+      console.error('Error suggesting another professional:', error);
       return {
-        fulfillmentText: 'Please ask for a professional recommendation first.',
+        fulfillmentText: 'Sorry, something went wrong while finding another professional. Please try again later.',
       };
     }
-
-    const areaOfExpertise = professionalContext.parameters.area_of_expertise;
-    
-    // Call the appropriate handler based on previous expertise
-    if (areaOfExpertise === 'Clinical Psychologist') {
-      return intentHandlers['getClinicalProfessional'](queryResult, userPhone, outputContexts, req);
-    } else if (areaOfExpertise === 'Counseling Psychologist') {
-      return intentHandlers['getCounselingProfessional'](queryResult, userPhone, outputContexts, req);
-    } else if (areaOfExpertise === 'Wellness Associate') {
-      return intentHandlers['getScholarProfessional'](queryResult, userPhone, outputContexts, req);
-    } else {
-      return {
-        fulfillmentText: 'Sorry, I cannot suggest another professional at this time.'
-      };
-    }
-  } catch (error) {
-    console.error('Error suggesting another professional:', error);
-    return {
-      fulfillmentText: 'Sorry, something went wrong while finding another professional. Please try again later.',
-    };
-  }
-},
+  },
 
   // Default fallback intent
   'Default Fallback Intent': async () => {
