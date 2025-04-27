@@ -50,7 +50,7 @@ const sendWhatsAppMessage = async (userPhone, payload) => {
 
 // Intent handler functions
 const intentHandlers = {
-  'Default Welcome Intent': async (queryResult, userPhone, outputContexts = [], req) => {
+  'welcomeIntent': async (queryResult, userPhone, outputContexts = [], req) => {
     console.log('Default Welcome Intent triggered'); 
     console.log('User phone:', userPhone);
     try {
