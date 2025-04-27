@@ -90,17 +90,7 @@ const intentHandlers = {
           console.error('WhatsApp send error:', error);
         }
 
-        return {
-          fulfillmentText: `Welcome back, ${existingUser[0].name}! How can we help you today?`,
-          outputContexts: [{
-            name: `${req.body.session}/contexts/known_user`,
-            lifespanCount: 5,
-            parameters: {
-              user: existingUser[0],
-              isExistingUser: true
-            }
-          }]
-        };
+        return {};
       } else {
         // New user flow
         return {
@@ -471,16 +461,7 @@ const intentHandlers = {
         }
       }
 
-      return {
-        fulfillmentText: `I've sent the booking link for ${professional.full_name} to your WhatsApp.`,
-        outputContexts: [{
-          name: `${req.body.session}/contexts/selected_professional`,
-          lifespanCount: 5,
-          parameters: {
-            ...professionalContext.parameters
-          }
-        }]
-      };
+      return {};
     } catch (error) {
       console.error('Error:', error);
       return {
