@@ -69,7 +69,7 @@ const intentHandlers = {
         // Existing user flow
         try {
           await sendWhatsAppMessage({
-            campaignName: "welcometext",
+            campaignName: "dialogflow_welcometext",
             destination: phone,
             templateParams: [
               existingUser[0].name,
