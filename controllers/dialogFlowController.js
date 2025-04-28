@@ -138,6 +138,7 @@ const intentHandlers = {
   'getUserName': async (queryResult, userPhone, outputContexts = [], req) => {
     try {
       const name = queryResult.parameters['person'];
+      console.log('getUserName parameters:', name);
       if (!name) {
         throw new Error('No name provided');
       }
@@ -533,6 +534,7 @@ const intentHandlers = {
 export async function dialogflowWebhook(req, res) {
   try {
     const { queryResult, originalDetectIntentRequest, outputContexts = [] } = req.body;
+    console.log('Full request body:', JSON.stringify(req.body, null, 2));
     const intentName = queryResult.intent.displayName;
 
     console.log(`Triggered intent: ${intentName}`);
