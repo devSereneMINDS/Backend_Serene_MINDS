@@ -137,7 +137,7 @@ const intentHandlers = {
   // Collect user information step 1 - Name
   'getUserName': async (queryResult, userPhone, outputContexts = [], req) => {
     try {
-      const name = queryResult.parameters['name'];
+      const name = queryResult.parameters['person'];
       if (!name) {
         throw new Error('No name provided');
       }
@@ -194,7 +194,7 @@ const intentHandlers = {
   // Collect user information step 3 - Location
   'getUserLocation': async (queryResult, userPhone, outputContexts = [], req) => {
     try {
-      const location = queryResult.parameters['location'];
+      const location = queryResult.parameters['geo-city'];
       if (!location) {
         throw new Error('No location provided');
       }
