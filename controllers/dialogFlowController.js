@@ -114,25 +114,25 @@ const intentHandlers = {
   },
 
   'needToTalkSomeone': async (queryResult, userPhone, outputContexts = [], req) => {
-  try {
-    if (!userPhone) {
-      console.error('No phone number available to send message');
+    try {
+      if (!userPhone) {
+        console.error('No phone number available to send message');
+        return {};
+      }
+
+      // Send WhatsApp message with the catalogue template
+      await sendWhatsAppMessage(userPhone, {
+        campaignName: "dialogflow_catalogue",
+        templateParams: [] // No parameters needed for this template
+      });
+
+      // Return empty response since we're just sending a message
       return {};
+    } catch (error) {
+      console.error('Error in needToTalkSomeone intent:', error);
+      return {}; // Still return empty to avoid showing error to user
     }
-
-    // Send WhatsApp message with the catalogue template
-    await sendWhatsAppMessage(userPhone, {
-      campaignName: "dialogflow_catalogue",
-      templateParams: [] // No parameters needed for this template
-    });
-
-    // Return empty response since we're just sending a message
-    return {};
-  } catch (error) {
-    console.error('Error in needToTalkSomeone intent:', error);
-    return {}; // Still return empty to avoid showing error to user
-  }
-},
+  },
 
   // Collect user information step 1 - Name
   'getUserName': async (queryResult, userPhone, outputContexts = [], req) => {
@@ -192,7 +192,7 @@ const intentHandlers = {
     }
   },
 
-  // Collect user information step 3 - Location
+  // Collect user information step 3 - Location (now creates user and sends catalogue)
   'getUserLocation': async (queryResult, userPhone, outputContexts = [], req) => {
     try {
       const location = queryResult.parameters['geo-city'];
@@ -201,19 +201,44 @@ const intentHandlers = {
       }
 
       const context = outputContexts.find(c => c.name.includes('collect_user_info'));
-      
-      return {
-        fulfillmentText: `Thank you. Could you briefly describe what you're struggling with?`,
-        outputContexts: [{
-          name: `${req.body.session}/contexts/collect_user_info`,
-          lifespanCount: 5,
-          parameters: {
-            ...context?.parameters,
-            location: location,
-            step: 'collect_problem'
-          }
-        }]
-      };
+      if (!context) {
+        throw new Error('Missing user context');
+      }
+
+      // Save new user to database
+      const newUser = await sql`
+        INSERT INTO client (
+          name, 
+          age, 
+          city, 
+          phone_no,
+          created_at
+        ) VALUES (
+          ${context?.parameters?.name},
+          ${context?.parameters?.age},
+          ${location},
+          ${userPhone.replace(/\D/g, '')},
+          NOW()
+        ) RETURNING *
+      `;
+
+      // Send welcome message via WhatsApp
+      try {
+        // await sendWhatsAppMessage(userPhone, {
+        //   campaignName: "welcometext",
+        //   templateParams: [newUser[0].name]
+        // });
+        
+        // Send catalogue template
+        await sendWhatsAppMessage(userPhone, {
+          campaignName: "dialogflow_catalogue",
+          templateParams: []
+        });
+      } catch (error) {
+        console.error('WhatsApp send error:', error);
+      }
+
+      return {};
     } catch (error) {
       console.error('Error in getUserLocation:', error);
       return {
@@ -222,7 +247,7 @@ const intentHandlers = {
     }
   },
 
-  // Collect user information step 4 - Problem
+  // Keep getUserProblem code but it won't be used in the flow
   'getUserProblem': async (queryResult, userPhone, outputContexts = [], req) => {
     try {
       const problem = queryResult.queryText;
@@ -520,7 +545,7 @@ const intentHandlers = {
             fulfillmentText: 'Sorry, something went wrong while finding another professional. Please try again later.',
         };
     }
-},
+  },
 
   // Default fallback intent
   'Default Fallback Intent': async () => {
