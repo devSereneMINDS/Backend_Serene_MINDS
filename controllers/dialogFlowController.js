@@ -547,6 +547,28 @@ const intentHandlers = {
     }
   },
 
+  // Add this to your intentHandlers object, along with the other handlers
+'dontKnowIntent': async (queryResult, userPhone) => {
+  try {
+    if (!userPhone) {
+      console.error('No phone number available to send message');
+      return {};
+    }
+
+    // Send WhatsApp message with the notknow template
+    await sendWhatsAppMessage(userPhone, {
+      campaignName: "dialogflow_notknow",
+      templateParams: [] // No parameters needed for this template
+    });
+
+    // Return empty response since we're just sending a message
+    return {};
+  } catch (error) {
+    console.error('Error in dontKnowIntent:', error);
+    return {}; // Still return empty to avoid showing error to user
+  }
+},
+
   // Default fallback intent
   'Default Fallback Intent': async () => {
     return {
