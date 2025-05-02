@@ -252,6 +252,11 @@ const intentHandlers = {
       ) RETURNING *
     `;
 
+    await sendWhatsAppMessage(userPhone, {
+          campaignName: "welcometext",
+          templateParams: [name]
+        });
+
     // Send catalogue template
     await sendWhatsAppMessage(userPhone, {
       campaignName: "dialogflow_catalogue",
