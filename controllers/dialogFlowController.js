@@ -216,11 +216,17 @@ const intentHandlers = {
 
       // Extract parameters safely
       const name = context.parameters?.name || context.parameters?.person?.[0]?.name;
-      const age = context.parameters?.age;
+      
+      // Handle age which comes as {amount: number, unit: string}
+      const ageObj = context.parameters?.age;
+      const age = ageObj?.amount || ageObj; // Get the amount property or use the value directly
       
       if (!name || !age) {
         throw new Error('Missing required user information (name or age)');
       }
+
+      // Normalize phone number
+      const phone = userPhone.replace(/\D/g, '');
 
       // Save new user to database
       const newUser = await sql`
@@ -232,9 +238,9 @@ const intentHandlers = {
           created_at
         ) VALUES (
           ${name},
-          ${age},
+          ${Number(age)},  // Ensure age is a number
           ${location},
-          ${userPhone.replace(/\D/g, '')},
+          ${phone},
           NOW()
         ) RETURNING *
       `;
