@@ -136,32 +136,36 @@ const intentHandlers = {
 
   // Collect user information step 1 - Name
   'getUserName': async (queryResult, userPhone, outputContexts = [], req) => {
-    try {
-      const name = queryResult.parameters['person'];
-      console.log('getUserName parameters:', name);
-      if (!name) {
-        throw new Error('No name provided');
-      }
-      
-      return {
-        fulfillmentText: `Thanks ${name}. Could you share your age?`,
-        outputContexts: [{
-          name: `${req.body.session}/contexts/collect_user_info`,
-          lifespanCount: 5,
-          parameters: {
-            name: name,
-            step: 'collect_age'
-          }
-        }]
-      };
-    } catch (error) {
-      console.error('Error in getUserName:', error);
-      return {
-        fulfillmentText: 'Sorry, I didn\'t get your name. Could you please tell me your name again?'
-      };
+  try {
+    // Extract the name from the person parameter
+    const personArray = queryResult.parameters['person'];
+    console.log('getUserName parameters:', personArray);
+    
+    if (!personArray || personArray.length === 0 || !personArray[0].name) {
+      throw new Error('No name provided');
     }
-  },
-
+    
+    const name = personArray[0].name;
+    
+    return {
+      fulfillmentText: `Thanks ${name}. Could you share your age?`,
+      outputContexts: [{
+        name: `${req.body.session}/contexts/collect_user_info`,
+        lifespanCount: 5,
+        parameters: {
+          name: name,
+          step: 'collect_age'
+        }
+      }]
+    };
+  } catch (error) {
+    console.error('Error in getUserName:', error);
+    return {
+      fulfillmentText: 'Sorry, I didn\'t get your name. Could you please tell me your name again?'
+    };
+  }
+},
+  
   // Collect user information step 2 - Age
   'getUserAge': async (queryResult, userPhone, outputContexts = [], req) => {
     try {
