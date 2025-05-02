@@ -204,9 +204,22 @@ const intentHandlers = {
         throw new Error('No location provided');
       }
 
-      const context = outputContexts.find(c => c.name.includes('collect_user_info'));
+      // Find the context - check both passed outputContexts and request body contexts
+      let context = outputContexts.find(c => c.name.includes('collect_user_info'));
+      if (!context && req.body.queryResult?.outputContexts) {
+        context = req.body.queryResult.outputContexts.find(c => c.name.includes('collect_user_info'));
+      }
+
       if (!context) {
         throw new Error('Missing user context');
+      }
+
+      // Extract parameters safely
+      const name = context.parameters?.name || context.parameters?.person?.[0]?.name;
+      const age = context.parameters?.age;
+      
+      if (!name || !age) {
+        throw new Error('Missing required user information (name or age)');
       }
 
       // Save new user to database
@@ -218,35 +231,26 @@ const intentHandlers = {
           phone_no,
           created_at
         ) VALUES (
-          ${context?.parameters?.name},
-          ${context?.parameters?.age},
+          ${name},
+          ${age},
           ${location},
           ${userPhone.replace(/\D/g, '')},
           NOW()
         ) RETURNING *
       `;
 
-      // Send welcome message via WhatsApp
-      try {
-        // await sendWhatsAppMessage(userPhone, {
-        //   campaignName: "welcometext",
-        //   templateParams: [newUser[0].name]
-        // });
-        
-        // Send catalogue template
-        await sendWhatsAppMessage(userPhone, {
-          campaignName: "dialogflow_catalogue",
-          templateParams: []
-        });
-      } catch (error) {
-        console.error('WhatsApp send error:', error);
-      }
+      // Send catalogue template
+      await sendWhatsAppMessage(userPhone, {
+        campaignName: "dialogflow_catalogue",
+        templateParams: []
+      });
 
       return {};
     } catch (error) {
       console.error('Error in getUserLocation:', error);
       return {
-        fulfillmentText: 'Sorry, I didn\'t get your location. Could you please tell me your city again?'
+        fulfillmentText: 'Sorry, I didn\'t get your location. Could you please tell me your city again?',
+        outputContexts: outputContexts // Maintain existing contexts
       };
     }
   },
