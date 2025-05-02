@@ -198,68 +198,75 @@ const intentHandlers = {
 
   // Collect user information step 3 - Location (now creates user and sends catalogue)
   'getUserLocation': async (queryResult, userPhone, outputContexts = [], req) => {
-    try {
-      const location = queryResult.parameters['geo-city'];
-      if (!location) {
-        throw new Error('No location provided');
-      }
-
-      // Find the context - check both passed outputContexts and request body contexts
-      let context = outputContexts.find(c => c.name.includes('collect_user_info'));
-      if (!context && req.body.queryResult?.outputContexts) {
-        context = req.body.queryResult.outputContexts.find(c => c.name.includes('collect_user_info'));
-      }
-
-      if (!context) {
-        throw new Error('Missing user context');
-      }
-
-      // Extract parameters safely
-      const name = context.parameters?.name || context.parameters?.person?.[0]?.name;
-      
-      // Handle age which comes as {amount: number, unit: string}
-      const ageObj = context.parameters?.age;
-      const age = ageObj?.amount || ageObj; // Get the amount property or use the value directly
-      
-      if (!name || !age) {
-        throw new Error('Missing required user information (name or age)');
-      }
-
-      // Normalize phone number
-      const phone = userPhone.replace(/\D/g, '');
-
-      // Save new user to database
-      const newUser = await sql`
-        INSERT INTO client (
-          name, 
-          age, 
-          city, 
-          phone_no,
-          created_at
-        ) VALUES (
-          ${name},
-          ${Number(age)},  // Ensure age is a number
-          ${location},
-          ${phone},
-          NOW()
-        ) RETURNING *
-      `;
-
-      // Send catalogue template
-      await sendWhatsAppMessage(userPhone, {
-        campaignName: "dialogflow_catalogue",
-        templateParams: []
-      });
-
-      return {};
-    } catch (error) {
-      console.error('Error in getUserLocation:', error);
-      return {
-        fulfillmentText: 'Sorry, I didn\'t get your location. Could you please tell me your city again?',
-        outputContexts: outputContexts // Maintain existing contexts
-      };
+  try {
+    const location = queryResult.parameters['geo-city'];
+    if (!location) {
+      throw new Error('No location provided');
     }
-  },
+
+    // Find the context
+    let context = outputContexts.find(c => c.name.includes('collect_user_info'));
+    if (!context && req.body.queryResult?.outputContexts) {
+      context = req.body.queryResult.outputContexts.find(c => c.name.includes('collect_user_info'));
+    }
+
+    if (!context) {
+      throw new Error('Missing user context');
+    }
+
+    // Extract parameters
+    const name = context.parameters?.name || context.parameters?.person?.[0]?.name;
+    const ageObj = context.parameters?.age;
+    const age = ageObj?.amount || ageObj; // Handle age object or direct value
+
+    // Validate inputs
+    if (!name || !age || isNaN(Number(age))) {
+      throw new Error(`Missing or invalid user information (name: ${name}, age: ${age})`);
+    }
+
+    const normalizedAge = Number(age);
+    if (normalizedAge <= 0 || normalizedAge > 150) {
+      throw new Error(`Invalid age value: ${normalizedAge}`);
+    }
+
+    // Normalize phone number
+    const phone = userPhone.replace(/\D/g, '');
+
+    // Log the query parameters for debugging
+    console.log('Inserting user with params:', { name, age: normalizedAge, location, phone });
+
+    // Save new user to database (use quoted column names to avoid reserved keyword issues)
+    const newUser = await sql`
+      INSERT INTO client (
+        "name", 
+        "age", 
+        "city", 
+        "phone_no",
+        "created_at"
+      ) VALUES (
+        ${name},
+        ${normalizedAge},
+        ${location},
+        ${phone},
+        NOW()
+      ) RETURNING *
+    `;
+
+    // Send catalogue template
+    await sendWhatsAppMessage(userPhone, {
+      campaignName: "dialogflow_catalogue",
+      templateParams: []
+    });
+
+    return {};
+  } catch (error) {
+    console.error('Error in getUserLocation:', error);
+    return {
+      fulfillmentText: 'Sorry, I didn\'t get your location. Could you please tell me your city again?',
+      outputContexts: outputContexts // Maintain existing contexts
+    };
+  }
+},
 
   // Keep getUserProblem code but it won't be used in the flow
   'getUserProblem': async (queryResult, userPhone, outputContexts = [], req) => {
