@@ -432,7 +432,7 @@ async function createDirectPayment(req, res) {
 
         // Store the payment details in the database with payment_id
         const [newPayment] = await sql`
-            INSERT INTO payments (payment_id, razorpay_order_id, amount, currency, appointment_details, status)
+            INSERT INTO payments (id, razorpay_order_id, amount, currency, appointment_details, status)
             VALUES (${paymentId}, ${razorpayOrderId}, ${amount}, ${currency || "INR"}, ${appointmentDetails}, 'Pending')
             RETURNING *;
         `;
