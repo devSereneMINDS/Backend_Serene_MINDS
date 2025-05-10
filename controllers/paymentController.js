@@ -399,4 +399,138 @@ async function getPaymentHistoryOfProfessionals(req, res) {
     }
 }
 
-export { createOrder, verifyPayment, getPaymentDetails, createAccount, updateProfessionalAccount, getPaymentHistoryOfProfessionals };
+// Create a direct payment that will be settled to the Razorpay-linked bank account
+async function createDirectPayment(req, res) {
+    const { amount, currency, appointmentDetails, professionalId } = req.body;
+
+    const client = await connectDb();
+    try {
+        // Validate professional exists
+        const result = await client.query(
+            'SELECT id FROM public.professional WHERE id = $1',
+            [professionalId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Professional not found" });
+        }
+
+        // Create a Razorpay order
+        const razorpayOrder = await razorpay.orders.create({
+            amount: amount * 100, // Convert to paise
+            currency: currency || "INR",
+            receipt: `order_${Math.random().toString(36).substr(2, 9)}`,
+            payment_capture: 1, // Auto-capture payment
+        });
+
+        const razorpayOrderId = razorpayOrder.id;
+
+        // Store the payment details in the database
+        const [newPayment] = await sql`
+            INSERT INTO payments (razorpay_order_id, amount, currency, appointment_details, status)
+            VALUES (${razorpayOrderId}, ${amount}, ${currency || "INR"}, ${appointmentDetails}, 'Pending')
+            RETURNING *;
+        `;
+
+        // Return the order details to the client to complete the payment
+        res.status(200).json({
+            id: newPayment.razorpay_order_id,
+            currency: newPayment.currency,
+            amount: newPayment.amount,
+            order_id: razorpayOrderId,
+            order_link: razorpayOrder.short_url,
+        });
+    } catch (error) {
+        console.error("Error creating direct payment:", error);
+        res.status(500).json({ error: "Unable to create payment." });
+    } finally {
+        await client.release();
+    }
+}
+
+// Verify payment and mark it for settlement
+async function verifyDirectPayment(req, res) {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    const client = await connectDb();
+    try {
+        // Retrieve the payment details from the database
+        const [payment] = await sql`
+            SELECT * FROM payments WHERE razorpay_order_id = ${razorpay_order_id};
+        `;
+
+        if (!payment) {
+            return res.status(404).json({ error: "Payment not found" });
+        }
+
+        // Verify the Razorpay signature
+        const generatedSignature = crypto
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+            .digest("hex");
+
+        if (generatedSignature !== razorpay_signature) {
+            return res.status(400).json({ error: "Invalid Razorpay signature" });
+        }
+
+        // Update payment status in the database
+        const [updatedPayment] = await sql`
+            UPDATE payments
+            SET razorpay_payment_id = ${razorpay_payment_id},
+                razorpay_signature = ${razorpay_signature},
+                status = 'Success'
+            WHERE razorpay_order_id = ${razorpay_order_id}
+            RETURNING *;
+        `;
+
+        // Note: No payout is initiated; funds will be settled to the Razorpay-linked bank account based on the settlement schedule
+        res.status(200).json({
+            message: "Payment verified successfully. Funds will be settled to your Razorpay-linked bank account.",
+            payment: updatedPayment,
+        });
+    } catch (error) {
+        console.error("Error verifying payment:", error);
+        res.status(500).json({ error: "Verification process failed" });
+    } finally {
+        await client.release();
+    }
+}
+
+// Trigger an on-demand settlement to transfer funds to the Razorpay-linked bank account
+async function triggerOnDemandSettlement(req, res) {
+    try {
+        // Trigger an on-demand settlement
+        const settlementResponse = await axios.post(
+            `${RAZORPAY_BASE_URL}/settlements/ondemand`,
+            {
+                amount: null, // Null means settle all available funds
+                settle_full_balance: true,
+                description: "On-demand settlement to linked bank account",
+            },
+            {
+                auth: {
+                    username: process.env.RAZORPAY_KEY_ID,
+                    password: process.env.RAZORPAY_KEY_SECRET,
+                },
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        res.status(200).json({
+            message: "On-demand settlement initiated successfully",
+            settlement: settlementResponse.data,
+        });
+    } catch (error) {
+        console.error("Error triggering on-demand settlement:", error.response?.data || error.message);
+        res.status(500).json({
+            message: "Failed to trigger on-demand settlement",
+            error: error.response?.data || error.message,
+        });
+    }
+}
+
+export { createOrder, verifyPayment, getPaymentDetails, createAccount, updateProfessionalAccount, getPaymentHistoryOfProfessionals,createDirectPayment, 
+    verifyDirectPayment, 
+    triggerOnDemandSettlement };
