@@ -547,36 +547,40 @@ async function triggerOnDemandSettlement(req, res) {
 }
 
 // Get professionals who received payments on a specific day
-async function getDailyPaymentProfessionals(req, res) {
-    const { date } = req.query; // Expect date in YYYY-MM-DD format
+async function getProfessionalPaymentHistory(req, res) {
+    const { professionalId } = req.query; // Expect professionalId as a UUID
 
-    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return res.status(400).json({ error: "Invalid or missing date parameter (use YYYY-MM-DD format)" });
+    // Validate professionalId format (UUID)
+    if (!professionalId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(professionalId)) {
+        return res.status(400).json({ error: "Invalid or missing professionalId parameter (use UUID format)" });
     }
 
     const client = await connectDb();
     try {
-        // Query payments with status 'Success' for the specified date
-        // Join with professional table where payment_id is in razorpay_account_details.payment_ids
-        const professionals = await sql`
-            SELECT DISTINCT pr.id, pr.name, pr.banking_details
-            FROM professional pr
-            JOIN payments p ON p.payment_id = ANY(pr.razorpay_account_details->'payment_ids'->>'array')
-            WHERE p.status = 'Success'
-            AND DATE(p.created_at) = ${date};
+        // Query payments with status 'Success' for today, linked to the professional
+        const payments = await sql`
+            SELECT p.id, p.razorpay_order_id, p.razorpay_payment_id, p.amount, p.currency, 
+                   p.appointment_details, p.status, p.created_at
+            FROM payments p
+            JOIN professional pr ON p.id = ANY(pr.razorpay_account_details->'payment_ids')
+            WHERE pr.id = ${professionalId}
+            AND p.status = 'Success'
+            AND DATE(p.created_at) = CURRENT_DATE;
         `;
 
-        if (professionals.length === 0) {
-            return res.status(404).json({ message: "No professionals with payments found for the specified date" });
+        if (payments.length === 0) {
+            return res.status(404).json({ 
+                message: "No successful payments found for this professional for today" 
+            });
         }
 
         res.status(200).json({
-            message: "Professionals with payments retrieved successfully",
-            professionals: professionals,
+            message: "Payment history retrieved successfully",
+            payments: payments,
         });
     } catch (error) {
-        console.error("Error fetching daily payment professionals:", error);
-        res.status(500).json({ error: "Unable to fetch professionals with payments" });
+        console.error("Error fetching payment history:", error);
+        res.status(500).json({ error: "Unable to fetch payment history" });
     } finally {
         await client.release();
     }
@@ -585,4 +589,4 @@ async function getDailyPaymentProfessionals(req, res) {
 export { createOrder, verifyPayment, getPaymentDetails, createAccount, updateProfessionalAccount, getPaymentHistoryOfProfessionals,createDirectPayment, 
     verifyDirectPayment, 
     triggerOnDemandSettlement,
-       getDailyPaymentProfessionals};
+       getProfessionalPaymentHistory};
