@@ -399,7 +399,6 @@ async function getPaymentHistoryOfProfessionals(req, res) {
     }
 }
 
-// Create a direct payment and store payment_id as UUID
 async function createDirectPayment(req, res) {
     const { amount, currency, appointmentDetails, professionalId } = req.body;
 
@@ -411,14 +410,14 @@ async function createDirectPayment(req, res) {
             [professionalId]
         );
 
-        console.log("Professional Result", result);
+        console.log("Professional Result",result);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ message: "Professional not found" });
         }
 
-        // Generate UUID for payment_id
-        const paymentId = uuidv4();
+        // Generate unique payment_id
+        const paymentId = `payment_${Math.random().toString(36).substr(2, 9)}`;
 
         // Create a Razorpay order
         const razorpayOrder = await razorpay.orders.create({
@@ -430,7 +429,7 @@ async function createDirectPayment(req, res) {
 
         const razorpayOrderId = razorpayOrder.id;
 
-        // Store the payment details in the database with UUID id
+        // Store the payment details in the database with payment_id
         const [newPayment] = await sql`
             INSERT INTO payments (id, razorpay_order_id, amount, currency, appointment_details, status)
             VALUES (${paymentId}, ${razorpayOrderId}, ${amount}, ${currency || "INR"}, ${appointmentDetails}, 'Pending')
@@ -562,7 +561,7 @@ async function getDailyPaymentProfessionals(req, res) {
         const professionals = await sql`
             SELECT DISTINCT pr.id, pr.name, pr.banking_details
             FROM professional pr
-            JOIN payments p ON p.id = ANY(pr.razorpay_account_details->'payment_ids'->>'array')
+            JOIN payments p ON p.payment_id = ANY(pr.razorpay_account_details->'payment_ids'->>'array')
             WHERE p.status = 'Success'
             AND DATE(p.created_at) = ${date};
         `;
