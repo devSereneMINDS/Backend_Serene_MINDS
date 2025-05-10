@@ -411,6 +411,8 @@ async function createDirectPayment(req, res) {
             [professionalId]
         );
 
+        console.log("Professional Result",result);
+
         if (result.rows.length === 0) {
             return res.status(404).json({ message: "Professional not found" });
         }
