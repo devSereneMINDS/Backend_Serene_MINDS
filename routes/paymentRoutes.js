@@ -11,4 +11,10 @@ router.get("/paymentDetails/:id", getPaymentDetails);
 router.post("/create", createAccount);
 router.post("/update", updateProfessionalAccount);
 router.get("/payment-history/:id", getPaymentHistoryOfProfessionals);
+
+// Routes for direct payment and settlement to Razorpay-linked bank account
+router.post('/direct-payment', createDirectPayment); // Create a payment
+router.post('/verify-direct-payment', verifyDirectPayment); // Verify a payment
+router.post('/settle-ondemand', triggerOnDemandSettlement); // Trigger on-demand settlement
+
 export default router;
