@@ -16,5 +16,6 @@ router.get("/payment-history/:id", getPaymentHistoryOfProfessionals);
 router.post('/direct-payment', createDirectPayment); // Create a payment
 router.post('/verify-direct-payment', verifyDirectPayment); // Verify a payment
 router.post('/settle-ondemand', triggerOnDemandSettlement); // Trigger on-demand settlement
+router.get('/daily-payment-professionals', getDailyPaymentProfessionals);
 
 export default router;
