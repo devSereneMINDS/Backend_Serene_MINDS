@@ -399,7 +399,7 @@ async function getPaymentHistoryOfProfessionals(req, res) {
     }
 }
 
-// Create a direct payment that will be settled to the Razorpay-linked bank account
+// Create a direct payment and store payment_id in professional's razorpay_account_details
 async function createDirectPayment(req, res) {
     const { amount, currency, appointmentDetails, professionalId } = req.body;
 
@@ -407,13 +407,16 @@ async function createDirectPayment(req, res) {
     try {
         // Validate professional exists
         const result = await client.query(
-            'SELECT id FROM public.professional WHERE id = $1',
+            'SELECT id, razorpay_account_details FROM public.professional WHERE id = $1',
             [professionalId]
         );
 
         if (result.rows.length === 0) {
             return res.status(404).json({ message: "Professional not found" });
         }
+
+        // Generate unique payment_id
+        const paymentId = `payment_${Math.random().toString(36).substr(2, 9)}`;
 
         // Create a Razorpay order
         const razorpayOrder = await razorpay.orders.create({
@@ -425,12 +428,23 @@ async function createDirectPayment(req, res) {
 
         const razorpayOrderId = razorpayOrder.id;
 
-        // Store the payment details in the database
+        // Store the payment details in the database with payment_id
         const [newPayment] = await sql`
-            INSERT INTO payments (razorpay_order_id, amount, currency, appointment_details, status)
-            VALUES (${razorpayOrderId}, ${amount}, ${currency || "INR"}, ${appointmentDetails}, 'Pending')
+            INSERT INTO payments (payment_id, razorpay_order_id, amount, currency, appointment_details, status)
+            VALUES (${paymentId}, ${razorpayOrderId}, ${amount}, ${currency || "INR"}, ${appointmentDetails}, 'Pending')
             RETURNING *;
         `;
+
+        // Update razorpay_account_details with the new payment_id
+        const currentAccountDetails = result.rows[0].razorpay_account_details || {};
+        const updatedPaymentIds = currentAccountDetails.payment_ids
+            ? [...currentAccountDetails.payment_ids, paymentId]
+            : [paymentId];
+
+        await client.query(
+            'UPDATE public.professional SET razorpay_account_details = razorpay_account_details || $1 WHERE id = $2',
+            [{ payment_ids: updatedPaymentIds }, professionalId]
+        );
 
         // Return the order details to the client to complete the payment
         res.status(200).json({
@@ -483,7 +497,7 @@ async function verifyDirectPayment(req, res) {
             RETURNING *;
         `;
 
-        // Note: No payout is initiated; funds will be settled to the Razorpay-linked bank account based on the settlement schedule
+        // Note: No payout is initiated; funds will be settled to the Razorpay-linked bank account
         res.status(200).json({
             message: "Payment verified successfully. Funds will be settled to your Razorpay-linked bank account.",
             payment: updatedPayment,
@@ -531,6 +545,43 @@ async function triggerOnDemandSettlement(req, res) {
     }
 }
 
+// Get professionals who received payments on a specific day
+async function getDailyPaymentProfessionals(req, res) {
+    const { date } = req.query; // Expect date in YYYY-MM-DD format
+
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ error: "Invalid or missing date parameter (use YYYY-MM-DD format)" });
+    }
+
+    const client = await connectDb();
+    try {
+        // Query payments with status 'Success' for the specified date
+        // Join with professional table where payment_id is in razorpay_account_details.payment_ids
+        const professionals = await sql`
+            SELECT DISTINCT pr.id, pr.name, pr.banking_details
+            FROM professional pr
+            JOIN payments p ON p.payment_id = ANY(pr.razorpay_account_details->'payment_ids'->>'array')
+            WHERE p.status = 'Success'
+            AND DATE(p.created_at) = ${date};
+        `;
+
+        if (professionals.length === 0) {
+            return res.status(404).json({ message: "No professionals with payments found for the specified date" });
+        }
+
+        res.status(200).json({
+            message: "Professionals with payments retrieved successfully",
+            professionals: professionals,
+        });
+    } catch (error) {
+        console.error("Error fetching daily payment professionals:", error);
+        res.status(500).json({ error: "Unable to fetch professionals with payments" });
+    } finally {
+        await client.release();
+    }
+}
+
 export { createOrder, verifyPayment, getPaymentDetails, createAccount, updateProfessionalAccount, getPaymentHistoryOfProfessionals,createDirectPayment, 
     verifyDirectPayment, 
-    triggerOnDemandSettlement };
+    triggerOnDemandSettlement,
+       getDailyPaymentProfessionals};
