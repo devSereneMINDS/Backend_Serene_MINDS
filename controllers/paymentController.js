@@ -562,7 +562,7 @@ async function getProfessionalPaymentHistory(req, res) {
             SELECT p.id, p.razorpay_order_id, p.razorpay_payment_id, p.amount, p.currency, 
                    p.appointment_details, p.status, p.created_at
             FROM payments p
-            JOIN professional pr ON p.id = ANY(pr.razorpay_account_details->'payment_ids')
+            JOIN professional pr ON p.id = ANY(CAST(pr.razorpay_account_details->>'payment_ids' AS TEXT[]))
             WHERE pr.id = ${professionalId}
             AND p.status = 'Success'
             AND DATE(p.created_at) = CURRENT_DATE;
@@ -582,7 +582,7 @@ async function getProfessionalPaymentHistory(req, res) {
         console.error("Error fetching payment history:", error);
         res.status(500).json({ error: "Unable to fetch payment history" });
     } finally {
-        await client.release();
+        await client.end(); // Use end() for non-pooled clients
     }
 }
 
