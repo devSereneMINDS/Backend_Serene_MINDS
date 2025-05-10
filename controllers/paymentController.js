@@ -548,11 +548,11 @@ async function triggerOnDemandSettlement(req, res) {
 
 // Get professionals who received payments on a specific day
 async function getProfessionalPaymentHistory(req, res) {
-    const { professionalId } = req.query; // Expect professionalId as a UUID
+    const { professionalId } = req.params; // Expect professionalId from URL path
 
-    // Validate professionalId format (UUID)
-    if (!professionalId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(professionalId)) {
-        return res.status(400).json({ error: "Invalid or missing professionalId parameter (use UUID format)" });
+    // Validate professionalId is not empty
+    if (!professionalId) {
+        return res.status(400).json({ error: "Missing professionalId parameter" });
     }
 
     const client = await connectDb();
