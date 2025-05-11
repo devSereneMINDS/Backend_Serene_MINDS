@@ -52,4 +52,6 @@ router.post('/client/details', getAppointmentsByClientAndProfessional);
 
 router.post('/clients/appointments', getClientDetailsByProfessional);
 
+router.post('/professionals/slots', getAvailableSlots);
+
 export default router;
