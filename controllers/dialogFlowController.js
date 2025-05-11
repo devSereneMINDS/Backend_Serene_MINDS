@@ -135,36 +135,85 @@ const intentHandlers = {
   },
 
   // Collect user information step 1 - Name
+//   'getUserName': async (queryResult, userPhone, outputContexts = [], req) => {
+//   try {
+//     // Extract the name from the person parameter
+//     const personArray = queryResult.parameters['person'];
+//     console.log('getUserName parameters:', personArray);
+    
+//     if (!personArray || personArray.length === 0 || !personArray[0].name) {
+//       throw new Error('No name provided');
+//     }
+    
+//     const name = personArray[0].name;
+    
+//     return {
+//       fulfillmentText: `Thanks ${name}. Could you share your age?`,
+//       outputContexts: [{
+//         name: `${req.body.session}/contexts/collect_user_info`,
+//         lifespanCount: 5,
+//         parameters: {
+//           name: name,
+//           step: 'collect_age'
+//         }
+//       }]
+//     };
+//   } catch (error) {
+//     console.error('Error in getUserName:', error);
+//     return {
+//       fulfillmentText: 'Sorry, I didn\'t get your name. Could you please tell me your name again?'
+//     };
+//   }
+// },
+
   'getUserName': async (queryResult, userPhone, outputContexts = [], req) => {
-  try {
-    // Extract the name from the person parameter
-    const personArray = queryResult.parameters['person'];
-    console.log('getUserName parameters:', personArray);
-    
-    if (!personArray || personArray.length === 0 || !personArray[0].name) {
-      throw new Error('No name provided');
+    try {
+      // Extract the name from the person parameter
+      const personArray = queryResult.parameters['person'];
+      console.log('getUserName parameters:', personArray);
+      
+      if (!personArray || personArray.length === 0 || !personArray[0].name) {
+        throw new Error('No name provided');
+      }
+      
+      const name = personArray[0].name;
+      const phone = userPhone.replace(/\D/g, '');
+
+      // Save new user to database
+      const [newUser] = await sql`
+        INSERT INTO client (
+          "name", 
+          "phone_no",
+          "created_at"
+        ) VALUES (
+          ${name},
+          ${phone},
+          NOW()
+        ) RETURNING *
+      `;
+
+      // Send welcome message via WhatsApp
+      await sendWhatsAppMessage(phone, {
+        campaignName: "welcometext",
+        templateParams: [name]
+      });
+
+      // Send catalogue template
+      await sendWhatsAppMessage(userPhone, {
+        campaignName: "dialogflow_catalogue",
+        templateParams: []
+      });
+
+      return {
+        fulfillmentText: `Thanks ${name}! We've registered you with Serene MINDS. How can we assist you today?`
+      };
+    } catch (error) {
+      console.error('Error in getUserName:', error);
+      return {
+        fulfillmentText: 'Sorry, I didn\'t get your name. Could you please tell me your name again?'
+      };
     }
-    
-    const name = personArray[0].name;
-    
-    return {
-      fulfillmentText: `Thanks ${name}. Could you share your age?`,
-      outputContexts: [{
-        name: `${req.body.session}/contexts/collect_user_info`,
-        lifespanCount: 5,
-        parameters: {
-          name: name,
-          step: 'collect_age'
-        }
-      }]
-    };
-  } catch (error) {
-    console.error('Error in getUserName:', error);
-    return {
-      fulfillmentText: 'Sorry, I didn\'t get your name. Could you please tell me your name again?'
-    };
-  }
-},
+  },
   
   // Collect user information step 2 - Age
   'getUserAge': async (queryResult, userPhone, outputContexts = [], req) => {
