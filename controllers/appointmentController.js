@@ -8,6 +8,113 @@ function handleError(res, error, message, statusCode = 500) {
   res.status(statusCode).send({ message, error: error.message || error });
 }
 
+
+function generateTimeSlots(startTime, endTime) {
+  const slots = [];
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  let currentHour = startHour;
+  let currentMinute = startMinute;
+
+  while (
+    (currentHour < endHour) ||
+    (currentHour === endHour && currentMinute < endMinute)
+  ) {
+    const nextHour = currentHour + 1;
+    const slotStart = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}`;
+    const slotEnd = `${nextHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}`;
+    slots.push({ start: slotStart, end: slotEnd });
+
+    currentHour += 1;
+  }
+
+  return slots;
+}
+
+// Utility function to check if a slot overlaps with an appointment
+function isSlotOverlapping(slot, appointment) {
+  const slotStart = new Date(`2025-01-01T${slot.start}:00Z`).getTime();
+  const slotEnd = new Date(`2025-01-01T${slot.end}:00Z`).getTime();
+
+  const appointmentStart = new Date(appointment.appointment_time).getTime();
+  const appointmentEnd = new Date(appointmentStart + appointment.duration * 60 * 1000).getTime();
+
+  return slotStart < appointmentEnd && slotEnd > appointmentStart;
+}
+
+// New API to get available slots for a professional on a specific date
+async function getAvailableSlots(req, res) {
+  const { professionalId, date } = req.body;
+
+  if (!professionalId || !date) {
+    return res.status(400).send({ message: "Professional ID and date are required" });
+  }
+
+  // Validate date format (YYYY-MM-DD)
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(date)) {
+    return res.status(400).send({ message: "Invalid date format. Use YYYY-MM-DD" });
+  }
+
+  try {
+    // Get the day of the week for the given date
+    const inputDate = new Date(date);
+    if (isNaN(inputDate.getTime())) {
+      return res.status(400).send({ message: "Invalid date" });
+    }
+    const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayOfWeek = daysOfWeek[inputDate.getDay()];
+
+    // Fetch professional's availability
+    const [professional] = await sql`
+      SELECT availability FROM professional WHERE id = ${professionalId};
+    `;
+
+    if (!professional) {
+      return res.status(404).send({ message: "Professional not found" });
+    }
+
+    // Parse availability for the specific day
+    const availability = professional.availability || {};
+    const dayAvailability = availability[dayOfWeek];
+
+    if (!dayAvailability || !dayAvailability.start || !dayAvailability.end) {
+      return res.status(200).send({
+        message: "No availability defined for this day",
+        data: []
+      });
+    }
+
+    // Generate all possible 1-hour slots for the day
+    const allSlots = generateTimeSlots(dayAvailability.start, dayAvailability.end);
+
+    // Fetch appointments for the professional on the given date
+    const startOfDay = new Date(`${date}T00:00:00Z`);
+    const endOfDay = new Date(`${date}T23:59:59.999Z`);
+    const appointments = await sql`
+      SELECT appointment_time, duration
+      FROM appointment
+      WHERE professional_id = ${professionalId}
+        AND appointment_time >= ${startOfDay.toISOString()}
+        AND appointment_time <= ${endOfDay.toISOString()}
+        AND status != 'Cancelled';
+    `;
+
+    // Filter out slots that overlap with existing appointments
+    const availableSlots = allSlots.filter(slot => 
+      !appointments.some(appointment => isSlotOverlapping(slot, appointment))
+    );
+
+    res.status(200).send({
+      message: "Available slots fetched successfully",
+      data: availableSlots
+    });
+  } catch (error) {
+    handleError(res, error, "Error fetching available slots");
+  }
+}
+
 // Get a list of all appointments
 async function getAppointmentsList(req, res) {
   try {
@@ -690,4 +797,5 @@ export {
   getMonthlyEarningsAndAppointments,
   getAppointmentCounts,
   getAppointmentsByClientAndProfessional,
+  getAvailableSlots,
 };
