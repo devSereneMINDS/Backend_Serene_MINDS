@@ -4,8 +4,8 @@ import cors from 'cors'; // Import CORS middleware
 // import fs from "fs";
 // import https from "https";
 // import http from "http";
-import appointmentRoutes from "./routes/appointmentRoutes.js";
-import clientRoutes from "./routes/clientRoutes.js";
+// import appointmentRoutes from "./routes/appointmentRoutes.js";
+// import clientRoutes from "./routes/clientRoutes.js";
 import clientRoutes2 from "./routes/clientRoutes2.js";
 import healthTipsRoutes from "./routes/healthTipsRoutes.js";
 import professionalRoutes from "./routes/professionalRoutes.js";
@@ -61,9 +61,9 @@ app.use(cors({
 
 
 // Routes
-app.use('/api/appointments', appointmentRoutes);
+// app.use('/api/appointments', appointmentRoutes);
 app.use('/api/appointment', appointmentRoutes2);
-app.use('/api/clients', clientRoutes);
+// app.use('/api/clients', clientRoutes);
 app.use('/api/clients2', clientRoutes2);
 app.use("/api/tips", healthTipsRoutes);
 app.use('/api/professionals', professionalRoutes);
