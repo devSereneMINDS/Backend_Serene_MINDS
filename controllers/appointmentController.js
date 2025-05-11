@@ -69,6 +69,19 @@ async function createAppointment(req, res) {
       await sql`UPDATE client SET phone_no = ${phone} WHERE id = ${client_id};`;
     }
 
+    // Check if professional's area_of_expertise is "Wellness Buddy"
+    const [professional] = await sql`
+      SELECT area_of_expertise FROM professional WHERE id = ${professional_id};
+    `;
+    if (professional && professional.area_of_expertise === "Wellness Buddy") {
+      // Increment no_of_sessions in client table
+      await sql`
+        UPDATE client
+        SET no_of_sessions = no_of_sessions + 1
+        WHERE id = ${client_id};
+      `;
+    }
+
     // Retrieve client and professional details
     const [client] = await sql`SELECT name, email, phone_no FROM client WHERE id = ${client_id};`;
     const [professional] = await sql`SELECT full_name, email, phone FROM professional WHERE id = ${professional_id};`;
