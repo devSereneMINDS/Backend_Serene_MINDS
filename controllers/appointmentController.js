@@ -34,17 +34,31 @@ function generateTimeSlots(startTime, endTime) {
 
 // Utility function to check if a slot overlaps with an appointment
 function isSlotOverlapping(slot, appointment, date) {
-  // Parse slot string (e.g., "9:00 - 10:00") to get start and end times
-  const [slotStart, slotEnd] = slot.split(" - ");
-  
+  // Parse slot string (e.g., "13:00 - 14:00") to get start and end times
+  const [slotStart, slotEnd] = slot.split(" - ").map(time => {
+    const [hour, minute] = time.split(":").map(Number);
+    return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+  });
+
   // Construct slot start and end times for the given date
   const slotStartTime = new Date(`${date}T${slotStart}:00Z`).getTime();
   const slotEndTime = new Date(`${date}T${slotEnd}:00Z`).getTime();
 
   const appointmentStart = new Date(appointment.appointment_time).getTime();
-  const appointmentEnd = new Date(appointmentStart + appointment.duration * 60 * 1000).getTime();
+  // Default to 60 minutes if duration is missing or invalid
+  const duration = appointment.duration && appointment.duration > 0 ? appointment.duration : 60;
+  const appointmentEnd = new Date(appointmentStart + duration * 60 * 1000).getTime();
 
-  return slotStartTime < appointmentEnd && slotEndTime > appointmentStart;
+  // Debug logging
+  console.log(`Checking slot: ${slot}`);
+  console.log(`Slot: ${new Date(slotStartTime).toISOString()} - ${new Date(slotEndTime).toISOString()}`);
+  console.log(`Appointment: ${new Date(appointmentStart).toISOString()} - ${new Date(appointmentEnd).toISOString()}`);
+  console.log(`Overlap: slotStartTime (${slotStartTime}) < appointmentEnd (${appointmentEnd}) && slotEndTime (${slotEndTime}) > appointmentStart (${appointmentStart})`);
+
+  const isOverlapping = slotStartTime < appointmentEnd && slotEndTime > appointmentStart;
+  console.log(`Result: ${isOverlapping}`);
+
+  return isOverlapping;
 }
 
 // Updated API to get available slots for a professional on a specific date
@@ -113,6 +127,8 @@ async function getAvailableSlots(req, res) {
         AND appointment_time <= ${endOfDay.toISOString()}
         AND status != 'Cancelled';
     `;
+
+    console.log('Fetched appointments:', appointments);
 
     // Filter out slots that overlap with existing appointments
     const availableSlots = allSlots.filter(slot => 
