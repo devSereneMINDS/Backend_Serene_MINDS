@@ -70,10 +70,10 @@ async function createAppointment(req, res) {
     }
 
     // Check if professional's area_of_expertise is "Wellness Buddy"
-    const [professional] = await sql`
+    const [professionalDetails] = await sql`
       SELECT area_of_expertise FROM professional WHERE id = ${professional_id};
     `;
-    if (professional && professional.area_of_expertise === "Wellness Buddy") {
+    if (professionalDetails && professionalDetails.area_of_expertise === "Wellness Buddy") {
       // Increment no_of_sessions in client table
       await sql`
         UPDATE client
