@@ -13,6 +13,7 @@ import {
     getMonthlyEarningsAndAppointments,
     getAppointmentCounts,
     getAppointmentsByClientAndProfessional,
+    getAvailableSlots,
 } from '../controllers/appointmentController.js';
 
 const router = express.Router();
