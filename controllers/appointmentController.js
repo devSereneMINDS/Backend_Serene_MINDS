@@ -9,6 +9,7 @@ function handleError(res, error, message, statusCode = 500) {
 }
 
 
+
 function generateTimeSlots(startTime, endTime) {
   const slots = [];
   const [startHour, startMinute] = startTime.split(":").map(Number);
@@ -33,9 +34,10 @@ function generateTimeSlots(startTime, endTime) {
 }
 
 // Utility function to check if a slot overlaps with an appointment
-function isSlotOverlapping(slot, appointment) {
-  const slotStart = new Date(`2025-01-01T${slot.start}:00Z`).getTime();
-  const slotEnd = new Date(`2025-01-01T${slot.end}:00Z`).getTime();
+function isSlotOverlapping(slot, appointment, date) {
+  // Construct slot start and end times for the given date
+  const slotStart = new Date(`${date}T${slot.start}:00Z`).getTime();
+  const slotEnd = new Date(`${date}T${slot.end}:00Z`).getTime();
 
   const appointmentStart = new Date(appointment.appointment_time).getTime();
   const appointmentEnd = new Date(appointmentStart + appointment.duration * 60 * 1000).getTime();
@@ -43,7 +45,7 @@ function isSlotOverlapping(slot, appointment) {
   return slotStart < appointmentEnd && slotEnd > appointmentStart;
 }
 
-// New API to get available slots for a professional on a specific date
+// Updated API to get available slots for a professional on a specific date
 async function getAvailableSlots(req, res) {
   const { professionalId, date } = req.body;
 
@@ -79,15 +81,24 @@ async function getAvailableSlots(req, res) {
     const availability = professional.availability || {};
     const dayAvailability = availability[dayOfWeek];
 
-    if (!dayAvailability || !dayAvailability.start || !dayAvailability.end) {
+    if (!dayAvailability) {
       return res.status(200).send({
         message: "No availability defined for this day",
         data: []
       });
     }
 
+    // Parse the availability string (e.g., "09:00-17:00")
+    const [startTime, endTime] = dayAvailability.split("-");
+    if (!startTime || !endTime) {
+      return res.status(200).send({
+        message: "Invalid availability format",
+        data: []
+      });
+    }
+
     // Generate all possible 1-hour slots for the day
-    const allSlots = generateTimeSlots(dayAvailability.start, dayAvailability.end);
+    const allSlots = generateTimeSlots(startTime, endTime);
 
     // Fetch appointments for the professional on the given date
     const startOfDay = new Date(`${date}T00:00:00Z`);
@@ -103,7 +114,7 @@ async function getAvailableSlots(req, res) {
 
     // Filter out slots that overlap with existing appointments
     const availableSlots = allSlots.filter(slot => 
-      !appointments.some(appointment => isSlotOverlapping(slot, appointment))
+      !appointments.some(appointment => isSlotOverlapping(slot, appointment, date))
     );
 
     res.status(200).send({
