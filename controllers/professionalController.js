@@ -20,7 +20,7 @@ async function createProfessional(req, res) {
         services = null, fees = null, availability = null, experience = null,
         domain = null, q_and_a = null, subscription_id = null, banking_details = null,
         linkedin_account = null, twitter_account = null, facebook_account = null, instagram_account = null, banned_clients = null,razorpay_account_details = null,uid = null,
-        street1 = null,street2 = null,city = null,state = null,pin_code = null,country = null,
+        street1 = null,street2 = null,city = null,state = null,pin_code = null,country = null,languages = null
     } = req.body;
 
     if (!full_name || !email || !phone || !date_of_birth || !photo_url || !proof_document) {
@@ -35,12 +35,12 @@ async function createProfessional(req, res) {
             (full_name, email, phone, photo_url, date_of_birth, proof_document,
             area_of_expertise, about_me, education, services, fees,
             availability, experience, domain, q_and_a, subscription_id, banking_details,
-            linkedin_account, twitter_account, facebook_account, instagram_account, banned_clients,razorpay_account_details,uid,street1,street2,city,state,pin_code,country)
+            linkedin_account, twitter_account, facebook_account, instagram_account, banned_clients,razorpay_account_details,uid,street1,street2,city,state,pin_code,country,languages)
             VALUES
             (${full_name}, ${email}, ${phone}, ${photo_url}, ${date_of_birth}, ${proof_document},
             ${area_of_expertise}, ${about_me}, ${education}, ${services}, ${fees},
             ${availability}, ${experience}, ${domain}, ${JSON.stringify(q_and_a)}, ${subscription_id}, ${banking_details},
-            ${linkedin_account}, ${twitter_account}, ${facebook_account}, ${instagram_account}, ${banned_clients},${razorpay_account_details},${uid},${street1},${street2},${city},${state},${pin_code},${country})
+            ${linkedin_account}, ${twitter_account}, ${facebook_account}, ${instagram_account}, ${banned_clients},${razorpay_account_details},${uid},${street1},${street2},${city},${state},${pin_code},${country},${languages})
             RETURNING *;
         `;
 
@@ -115,7 +115,7 @@ async function updateProfessional(req, res) {
         "full_name", "email", "phone", "photo_url", "date_of_birth", "proof_document",
         "area_of_expertise", "about_me", "education", "services", "fees",
         "availability", "experience", "domain", "q_and_a", "subscription_id", "banking_details",
-        "linkedin_account", "twitter_account", "facebook_account", "instagram_account", "banned_clients","razorpay_account_details","uid","street1","street2","city","state","pin_code","country"
+        "linkedin_account", "twitter_account", "facebook_account", "instagram_account", "banned_clients","razorpay_account_details","uid","street1","street2","city","state","pin_code","country","languages"
     ];
 
     const updates = Object.keys(req.body)
