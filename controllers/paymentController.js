@@ -431,8 +431,8 @@ async function createDirectPayment(req, res) {
 
         // Store the payment details in the database with payment_id
         const [newPayment] = await sql`
-            INSERT INTO payments (id, razorpay_order_id, amount, currency, appointment_details, status)
-            VALUES (${paymentId}, ${razorpayOrderId}, ${amount}, ${currency || "INR"}, ${appointmentDetails}, 'Pending')
+            INSERT INTO payments (id, razorpay_order_id, amount, currency, appointment_details, status, professional_id)
+            VALUES (${paymentId}, ${razorpayOrderId}, ${amount}, ${currency || "INR"}, ${appointmentDetails}, 'Pending', ${professionalId})
             RETURNING *;
         `;
 
@@ -548,24 +548,21 @@ async function triggerOnDemandSettlement(req, res) {
 
 // Get professionals who received payments on a specific day
 async function getProfessionalPaymentHistory(req, res) {
-    const { professionalId } = req.params; // Expect professionalId from URL path
+    const { professionalId } = req.params;
 
-    // Validate professionalId is not empty
     if (!professionalId) {
         return res.status(400).json({ error: "Missing professionalId parameter" });
     }
 
     const client = await connectDb();
     try {
-        // Query payments with status 'Success' for today, linked to the professional
         const payments = await sql`
             SELECT p.id, p.razorpay_order_id, p.razorpay_payment_id, p.amount, p.currency, 
                    p.appointment_details, p.status, p.created_at
             FROM payments p
-            JOIN professional pr ON p.id = ANY(CAST(pr.razorpay_account_details->>'payment_ids' AS TEXT[]))
-            WHERE pr.id = ${professionalId}
-            AND p.status = 'Success'
-            AND DATE(p.created_at) = CURRENT_DATE;
+            WHERE p.professional_id = ${professionalId}
+              AND p.status = 'Success'
+              AND DATE(p.created_at) = CURRENT_DATE;
         `;
 
         if (payments.length === 0) {
@@ -582,9 +579,10 @@ async function getProfessionalPaymentHistory(req, res) {
         console.error("Error fetching payment history:", error);
         res.status(500).json({ error: "Unable to fetch payment history" });
     } finally {
-        await client.end(); // Use end() for non-pooled clients
+        await client.end();
     }
 }
+
 
 export { createOrder, verifyPayment, getPaymentDetails, createAccount, updateProfessionalAccount, getPaymentHistoryOfProfessionals,createDirectPayment, 
     verifyDirectPayment, 
