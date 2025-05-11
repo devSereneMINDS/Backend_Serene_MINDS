@@ -8,8 +8,7 @@ function handleError(res, error, message, statusCode = 500) {
   res.status(statusCode).send({ message, error: error.message || error });
 }
 
-
-
+// Utility function to generate 1-hour time slots from start to end time
 function generateTimeSlots(startTime, endTime) {
   const slots = [];
   const [startHour, startMinute] = startTime.split(":").map(Number);
@@ -23,9 +22,9 @@ function generateTimeSlots(startTime, endTime) {
     (currentHour === endHour && currentMinute < endMinute)
   ) {
     const nextHour = currentHour + 1;
-    const slotStart = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}`;
-    const slotEnd = `${nextHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}`;
-    slots.push({ start: slotStart, end: slotEnd });
+    const slotStart = `${currentHour}:${currentMinute.toString().padStart(2, "0")}`;
+    const slotEnd = `${nextHour}:${currentMinute.toString().padStart(2, "0")}`;
+    slots.push(`${slotStart} - ${slotEnd}`);
 
     currentHour += 1;
   }
@@ -35,14 +34,17 @@ function generateTimeSlots(startTime, endTime) {
 
 // Utility function to check if a slot overlaps with an appointment
 function isSlotOverlapping(slot, appointment, date) {
+  // Parse slot string (e.g., "9:00 - 10:00") to get start and end times
+  const [slotStart, slotEnd] = slot.split(" - ");
+  
   // Construct slot start and end times for the given date
-  const slotStart = new Date(`${date}T${slot.start}:00Z`).getTime();
-  const slotEnd = new Date(`${date}T${slot.end}:00Z`).getTime();
+  const slotStartTime = new Date(`${date}T${slotStart}:00Z`).getTime();
+  const slotEndTime = new Date(`${date}T${slotEnd}:00Z`).getTime();
 
   const appointmentStart = new Date(appointment.appointment_time).getTime();
   const appointmentEnd = new Date(appointmentStart + appointment.duration * 60 * 1000).getTime();
 
-  return slotStart < appointmentEnd && slotEnd > appointmentStart;
+  return slotStartTime < appointmentEnd && slotEndTime > appointmentStart;
 }
 
 // Updated API to get available slots for a professional on a specific date
