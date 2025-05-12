@@ -1,5 +1,5 @@
 import express from "express";
-import { createOrder, verifyPayment, getPaymentDetails, createAccount, updateProfessionalAccount, getPaymentHistoryOfProfessionals,createDirectPayment,verifyDirectPayment, triggerOnDemandSettlement, getProfessionalPaymentHistory} from "../controllers/paymentController.js";
+import { createOrder, verifyPayment, getPaymentDetails, createAccount, updateProfessionalAccount, getPaymentHistoryOfProfessionals,createDirectPayment,verifyDirectPayment, triggerOnDemandSettlement, getProfessionalPaymentHistory, generatePaymentReport} from "../controllers/paymentController.js";
 
 const router = express.Router();
 
@@ -17,5 +17,6 @@ router.post('/direct-payment', createDirectPayment); // Create a payment
 router.post('/verify-direct-payment', verifyDirectPayment); // Verify a payment
 router.post('/settle-ondemand', triggerOnDemandSettlement); // Trigger on-demand settlement
 router.get('/history/:professionalId', getProfessionalPaymentHistory);
+router.post("/payment-report", generatePaymentReport);
 
 export default router;

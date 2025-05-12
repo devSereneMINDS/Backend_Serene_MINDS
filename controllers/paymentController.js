@@ -1,13 +1,24 @@
 import sql from "../config/db.js";
 import Razorpay from 'razorpay';
-import fetch from 'node-fetch';  // Ensure this import is added
+import fetch from 'node-fetch';  
 import axios from "axios";
 import { connectDb } from "../config/pg.js";
 import crypto from 'crypto'
 import { Buffer } from "buffer";
 import dotenv from 'dotenv';
+import ExcelJS from "exceljs";
+import nodemailer from "nodemailer";
 
 dotenv.config();
+
+// Nodemailer configuration
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
 
 
 // Initialize Razorpay with the keys from .env
@@ -461,8 +472,6 @@ async function createDirectPayment(req, res) {
     } catch (error) {
         console.error("Error creating direct payment:", error);
         res.status(500).json({ error: "Unable to create payment." });
-    } finally {
-        await client.release();
     }
 }
 
@@ -509,8 +518,6 @@ async function verifyDirectPayment(req, res) {
     } catch (error) {
         console.error("Error verifying payment:", error);
         res.status(500).json({ error: "Verification process failed" });
-    } finally {
-        await client.release();
     }
 }
 
@@ -581,13 +588,114 @@ async function getProfessionalPaymentHistory(req, res) {
     } catch (error) {
         console.error("Error fetching payment history:", error);
         res.status(500).json({ error: "Unable to fetch payment history" });
-    } finally {
-        await client.end();
+    }
+}
+
+// Controller to generate and email payment report
+async function generatePaymentReport(req, res) {
+    let client;
+    try {
+        client = await connectDb();
+        const payments = await sql`
+            SELECT 
+                p.id, 
+                p.razorpay_order_id, 
+                p.razorpay_payment_id, 
+                p.amount, 
+                p.currency, 
+                p.status, 
+                p.created_at,
+                pr.full_name,
+                pr.banking_details->>'account_no' AS account_no,
+                pr.banking_details->>'ifsc_code' AS ifsc_code
+            FROM payments p
+            LEFT JOIN professional pr ON p.professional_id = pr.id
+            WHERE DATE(p.created_at) = CURRENT_DATE
+        `;
+
+        if (payments.length === 0) {
+            return res.status(404).json({ message: "No payments found for today" });
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Payments Report");
+
+        worksheet.columns = [
+            { header: "Payment ID", key: "id", width: 15 },
+            { header: "Razorpay Order ID", key: "razorpay_order_id", width: 30 },
+            { header: "Razorpay Payment ID", key: "razorpay_payment_id", width: 30 },
+            { header: "Amount", key: "amount", width: 15 },
+            { header: "Currency", key: "currency", width: 10 },
+            { header: "Status", key: "status", width: 15 },
+            { header: "Created At", key: "created_at", width: 25 },
+            { header: "Professional Name", key: "full_name", width: 25 },
+            { header: "Account Number", key: "account_no", width: 20 },
+            { header: "IFSC Code", key: "ifsc_code", width: 15 },
+        ];
+
+        payments.forEach((payment) => {
+            worksheet.addRow({
+                id: payment.id,
+                razorpay_order_id: payment.razorpay_order_id,
+                razorpay_payment_id: payment.razorpay_payment_id,
+                amount: payment.amount,
+                currency: payment.currency,
+                status: payment.status,
+                created_at: new Date(payment.created_at).toLocaleString(),
+                full_name: payment.full_name || 'N/A',
+                account_no: payment.account_no || 'N/A',
+                ifsc_code: payment.ifsc_code || 'N/A',
+            });
+        });
+
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
+
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        const emailBody = `
+            <p>Hello <b>Serene MINDS Dev Team</b>,</p>
+            <p>Please find attached the daily payment report for ${new Date().toLocaleDateString()}.</p>
+            <p>This report includes all payment transactions processed today, along with professional details.</p>
+            <p><i>This is an automated message. Please do not reply.</i></p>
+            <p>Best regards,</p>
+            <p><b>Serene MINDS Team</b></p>
+        `;
+
+        await transporter.sendMail({
+            from: `"Serene MINDS" <${process.env.EMAIL_USER}>`,
+            to: "serenemindsdevteam@gmail.com",
+            subject: `Daily Payment Report - ${new Date().toLocaleDateString()}`,
+            html: emailBody,
+            attachments: [
+                {
+                    filename: `payment_report_${new Date().toISOString().split("T")[0]}.xlsx`,
+                    content: buffer,
+                    contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                },
+            ],
+        });
+
+        res.status(200).json({
+            message: "Payment report generated and sent successfully to serenemindsdevteam@gmail.com",
+        });
+    } catch (error) {
+        console.error("Error generating payment report:", error);
+        res.status(500).json({ error: "Unable to generate and send payment report" });
     }
 }
 
 
-export { createOrder, verifyPayment, getPaymentDetails, createAccount, updateProfessionalAccount, getPaymentHistoryOfProfessionals,createDirectPayment, 
-    verifyDirectPayment, 
-    triggerOnDemandSettlement,
-       getProfessionalPaymentHistory};
+export {
+  createOrder,
+  verifyPayment,
+  getPaymentDetails,
+  createAccount,
+  updateProfessionalAccount,
+  getPaymentHistoryOfProfessionals,
+  createDirectPayment,
+  verifyDirectPayment,
+  triggerOnDemandSettlement,
+  getProfessionalPaymentHistory,
+  generatePaymentReport
+};
