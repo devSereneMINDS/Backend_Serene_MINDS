@@ -396,6 +396,11 @@ const intentHandlers = {
 
       const bookingLink = `${BOOKING_BASE_URL}/${professional.id}`;
       const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
+      // Prepare languages string
+      const languages = Array.isArray(professional.languages) && professional.languages.length > 0
+        ? professional.languages.join(', ')
+        : "English, Hindi";
+
 
       // Send WhatsApp message if phone available
       if (userPhone) {
@@ -405,7 +410,7 @@ const intentHandlers = {
             templateParams: [
               professional.full_name,
               professional.area_of_expertise || areaOfExpertise,
-              "English, Hindi"
+              languages
             ],
             media: {
               url: photoUrl,
@@ -453,6 +458,11 @@ const intentHandlers = {
 
       const bookingLink = `${BOOKING_BASE_URL}/${professional.id}`;
       const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
+      // Prepare languages string
+      const languages = Array.isArray(professional.languages) && professional.languages.length > 0
+        ? professional.languages.join(', ')
+        : "English, Hindi";
+
 
       // Send WhatsApp message if phone available
       if (userPhone) {
@@ -462,7 +472,7 @@ const intentHandlers = {
             templateParams: [
               professional.full_name,
               professional.area_of_expertise || areaOfExpertise,
-              "English, Hindi"
+              languages
             ],
             media: {
               url: photoUrl,
@@ -510,6 +520,11 @@ const intentHandlers = {
 
       const bookingLink = `${BOOKING_BASE_URL}/${professional.id}`;
       const photoUrl = professional.photo_url || DEFAULT_PROFESSIONAL_PHOTO;
+      // Prepare languages string
+      const languages = Array.isArray(professional.languages) && professional.languages.length > 0
+        ? professional.languages.join(', ')
+        : "English, Hindi";
+
 
       // Send WhatsApp message if phone available
       if (userPhone) {
@@ -519,7 +534,7 @@ const intentHandlers = {
             templateParams: [
               professional.full_name,
               professional.area_of_expertise || areaOfExpertise,
-              "English, Hindi"
+              languages
             ],
             media: {
               url: photoUrl,
