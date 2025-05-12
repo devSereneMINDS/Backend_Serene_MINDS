@@ -5,6 +5,9 @@ import axios from "axios";
 import { connectDb } from "../config/pg.js";
 import crypto from 'crypto'
 import { Buffer } from "buffer";
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 
 // Initialize Razorpay with the keys from .env
