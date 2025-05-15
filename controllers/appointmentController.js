@@ -461,12 +461,21 @@ async function deleteAppointment(req, res) {
 // Get appointments by client ID
 async function getAppointmentsByClient(req, res) {
   const { clientId } = req.params;
-  //console.log(clientId);
 
   try {
     const appointments = await sql`
-            SELECT * FROM appointment WHERE client_id = ${clientId};
-        `;
+      SELECT 
+        appointment.*, 
+        professional.full_name 
+      FROM 
+        appointment 
+      JOIN 
+        professional 
+      ON 
+        appointment.professional_id = professional.id
+      WHERE 
+        appointment.client_id = ${clientId};
+    `;
 
     if (appointments.length === 0) {
       return res
@@ -481,6 +490,7 @@ async function getAppointmentsByClient(req, res) {
       .send({ message: "Error fetching appointments for client", error });
   }
 }
+
 
 // Get appointments by professional ID
 async function getAppointmentsByProfessional(req, res) {
