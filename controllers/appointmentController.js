@@ -310,7 +310,7 @@ async function createAppointment(req, res) {
         }),
 
         sendWhatsAppMessage2({
-          campaignName: "client_appointment_details02",
+          campaignName: "client_appointment_details03",
           destination: phone,
           userName: "Serene MINDS",
           templateParams: [
@@ -320,7 +320,6 @@ async function createAppointment(req, res) {
             `${new Date(appointment_time).toLocaleTimeString()}`,
             String(service) || "No Service Provided",
             message || "No message provided",
-            meet_link || "Not Provided",
           ],
         }),
 
