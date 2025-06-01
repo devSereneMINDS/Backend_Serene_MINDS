@@ -3,7 +3,7 @@ import sql from '../config/db.js';
 const AISENSY_URL = process.env.AISENSY_URL;
 const AISENSY_API_KEY = process.env.AISENSY_API_KEY?.trim();
 const BOOKING_BASE_URL = 'https://booking.sereneminds.life';
-const DEFAULT_PROFESSIONAL_PHOTO = 'https://png.pngtree.com/png-vector/20240309/ourmid/pngtree-psychologist-vector-concept-color-illustration-png-image_11904992.png';
+const DEFAULT_PROFESSIONAL_PHOTO = 'https://qmdfzzfphkfybewcyhej.supabase.co/storage/v1/object/public/uploads//Default_Photo.jpg';
 
 // Shared utility functions
 const getRandomProfessional = async (areaOfExpertise) => {
