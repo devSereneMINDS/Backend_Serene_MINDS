@@ -317,4 +317,5 @@ export {
     searchByKeyword,
     getProfessionalByEmail,
     getRandomProfessionalByExpertise,
+    getNullFields,
 };
