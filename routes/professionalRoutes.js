@@ -22,6 +22,6 @@ router.delete('/delete/:professionalId', deleteProfessional);
 router.get('/search/:keyword/:professionalId',searchByKeyword);
 router.get('/email/:email', getProfessionalByEmail);
 router.get('/expertise/:areaOfExpertise', getRandomProfessionalByExpertise);
-router.get('/null-fields', getNullFields);
+router.get('/null/:professionalId', getNullFields);
 
 export default router;
