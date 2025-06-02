@@ -8,7 +8,8 @@ import {
     deleteProfessional,
     searchByKeyword,
     getProfessionalByEmail,
-    getRandomProfessionalByExpertise
+    getRandomProfessionalByExpertise,
+    getNullFields
 } from '../controllers/professionalController.js';
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.delete('/delete/:professionalId', deleteProfessional);
 router.get('/search/:keyword/:professionalId',searchByKeyword);
 router.get('/email/:email', getProfessionalByEmail);
 router.get('/expertise/:areaOfExpertise', getRandomProfessionalByExpertise);
+router.get('/null-fields', getNullFields);
 
 export default router;
