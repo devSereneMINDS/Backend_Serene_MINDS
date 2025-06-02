@@ -273,12 +273,18 @@ async function getRandomProfessionalByExpertise(req, res) {
     }
 }
 
-// Get list of null fields for all professionals
+// Get null fields for a specific professional by ID
 async function getNullFields(req, res) {
+    const { professionalId } = req.params;
+
     try {
-        const professionals = await sql`
-            SELECT * FROM professional;
+        const professional = await sql`
+            SELECT * FROM professional WHERE id = ${professionalId};
         `;
+
+        if (professional.length === 0) {
+            return res.status(404).send({ message: 'Professional not found' });
+        }
 
         const fields = [
             "full_name", "email", "phone", "photo_url", "date_of_birth", "proof_document",
@@ -288,21 +294,18 @@ async function getNullFields(req, res) {
             "razorpay_account_details", "uid", "street1", "street2", "city", "state", "pin_code", "country", "languages"
         ];
 
-        const nullFieldsList = professionals.map(professional => {
-            const nullFields = fields.filter(field => professional[field] === null || professional[field] === undefined);
-            return {
-                id: professional.id,
-                full_name: professional.full_name,
-                null_fields: nullFields
-            };
-        });
+        const nullFields = fields.filter(field => professional[0][field] === null || professional[0][field] === undefined);
 
         res.status(200).send({
             message: "Null fields retrieved successfully",
-            data: nullFieldsList
+            data: {
+                id: professional[0].id,
+                full_name: professional[0].full_name,
+                null_fields: nullFields
+            }
         });
     } catch (error) {
-        console.error("Error fetching null fields:", error);
+        console.error("Error fetching null fields for professional:", error);
         res.status(500).send({ message: "Error fetching null fields", error });
     }
 }
