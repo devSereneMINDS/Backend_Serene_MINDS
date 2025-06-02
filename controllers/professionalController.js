@@ -273,6 +273,40 @@ async function getRandomProfessionalByExpertise(req, res) {
     }
 }
 
+// Get list of null fields for all professionals
+async function getNullFields(req, res) {
+    try {
+        const professionals = await sql`
+            SELECT * FROM professional;
+        `;
+
+        const fields = [
+            "full_name", "email", "phone", "photo_url", "date_of_birth", "proof_document",
+            "area_of_expertise", "about_me", "education", "services", "fees",
+            "availability", "experience", "domain", "q_and_a", "subscription_id", "banking_details",
+            "linkedin_account", "twitter_account", "facebook_account", "instagram_account", "banned_clients",
+            "razorpay_account_details", "uid", "street1", "street2", "city", "state", "pin_code", "country", "languages"
+        ];
+
+        const nullFieldsList = professionals.map(professional => {
+            const nullFields = fields.filter(field => professional[field] === null || professional[field] === undefined);
+            return {
+                id: professional.id,
+                full_name: professional.full_name,
+                null_fields: nullFields
+            };
+        });
+
+        res.status(200).send({
+            message: "Null fields retrieved successfully",
+            data: nullFieldsList
+        });
+    } catch (error) {
+        console.error("Error fetching null fields:", error);
+        res.status(500).send({ message: "Error fetching null fields", error });
+    }
+}
+
 
 export {
     getProfessionalsList,
