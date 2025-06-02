@@ -496,16 +496,18 @@ async function getAppointmentsByProfessional(req, res) {
   const { professionalId } = req.params;
 
   try {
-    // Get the appointments along with client name by joining the client table
+    // Get appointments along with client and professional details
     const appointments = await sql`
       SELECT 
         appointment.*, 
         client.name AS clientName,
         client.age AS clientAge,
         client.sex AS clientGender,
-        client.phone_no AS clientPhone
+        client.phone_no AS clientPhone,
+        professional.full_name AS professionalName
       FROM appointment
       LEFT JOIN client ON appointment.client_id = client.id
+      LEFT JOIN professional ON appointment.professional_id = professional.id
       WHERE appointment.professional_id = ${professionalId};
     `;
 
@@ -515,11 +517,10 @@ async function getAppointmentsByProfessional(req, res) {
 
     res.status(200).send(appointments);
   } catch (error) {
-    res
-      .status(500)
-      .send({ message: "Error fetching appointments for professional", error });
+    res.status(500).send({ message: "Error fetching appointments for professional", error });
   }
 }
+
 
 
 
