@@ -60,4 +60,37 @@ async function sendInvitation(req, res) {
   }
 }
 
-export { sendInvitation };
+async function sendCustomEmail(req, res) {
+  const { email, content, subject } = req.body;
+
+  // Validate inputs
+  if (!email || !content) {
+    return res.status(400).send({ message: "Email and content are required" });
+  }
+
+  try {
+    // Email setup
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,  // From .env
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: `"Serene MINDS" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: subject || "Message from Serene MINDS",  // Optional subject
+      html: `<p>${content}</p>`,  // Send as HTML content
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).send({ message: "Email sent successfully!" });
+  } catch (error) {
+    handleError(res, error, "Error sending custom email");
+  }
+}
+
+export { sendInvitation,sendCustomEmail };
