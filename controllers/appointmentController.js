@@ -719,36 +719,84 @@ async function getClientDetailsByProfessional(req, res) {
   const { professionalId } = req.body;
 
   if (!professionalId) {
-      return res.status(400).send({ message: "Professional ID is required" });
+    return res.status(400).send({ message: "Professional ID is required" });
   }
 
-  try {
-      const clientDetails = await sql`
-          SELECT DISTINCT
-              c.id,
-              c.name, 
-              c.age, 
-              c.q_and_a->>'gender' AS gender,  -- Extract gender from JSONB
-              c.q_and_a->>'age-group' AS ageGroup, -- Extract age-group from JSONB
-              c.phone_no AS phone_number, 
-              c.email,
-              c.photo_url,
-              c.diagnosis AS disease
-          FROM client c
-          JOIN appointment a ON c.id = a.client_id
-          WHERE a.professional_id = ${professionalId};
-      `;
+  // Define options for q_1
+  const Q1_OPTIONS = [
+    'Anxiety/Stress',
+    'Depression/Low mood',
+    'Relationship issues',
+    'Work/School stress',
+    'Grief/Loss',
+    'Trauma/PTSD',
+    'Self-esteem issues',
+    'Anger management',
+    'Substance use concerns',
+    'Other'
+  ];
 
-      if (clientDetails.length === 0) {
-          return res.status(404).send({ message: 'No clients found for the specified professional' });
+  try {
+    const clientDetails = await sql`
+      SELECT DISTINCT
+        c.id,
+        c.name, 
+        c.age, 
+        c.q_and_a->>'gender' AS gender,
+        c.q_and_a->>'age-group' AS ageGroup,
+        c.phone_no AS phone_number, 
+        c.email,
+        c.photo_url,
+        c.q_and_a->>'q_1' AS q_1
+      FROM client c
+      JOIN appointment a ON c.id = a.client_id
+      WHERE a.professional_id = ${professionalId};
+    `;
+
+    if (clientDetails.length === 0) {
+      return res.status(404).send({ message: 'No clients found for the specified professional' });
+    }
+
+    // Map q_1 values to options
+    const formattedClients = clientDetails.map(client => {
+      let diagnosis = 'Not Available';
+      
+      if (client.q_1) {
+        try {
+          // Parse q_1 (could be string or JSON array)
+          const q1Answers = Array.isArray(JSON.parse(client.q_1)) 
+            ? JSON.parse(client.q_1)
+            : [client.q_1];
+          
+          // Map valid indices to options
+          const validAnswers = q1Answers
+            .filter(index => typeof index === 'string' && !isNaN(parseInt(index)) && Q1_OPTIONS[parseInt(index)])
+            .map(index => Q1_OPTIONS[parseInt(index)]);
+          
+          diagnosis = validAnswers.length > 0 ? validAnswers.join(', ') : 'Not Available';
+        } catch (error) {
+          console.error(`Error parsing q_1 for client ${client.id}:`, error);
+          diagnosis = 'Not Available';
+        }
       }
 
-      res.status(200).send({
-          message: "Client details fetched successfully",
-          data: clientDetails
-      });
+      return {
+        ...client,
+        diagnosis: diagnosis,
+        q_1: undefined // Remove raw q_1 to avoid confusion
+      };
+    });
+
+    res.status(200).json({
+      message: "Client details fetched successfully",
+      data: formattedClients
+    });
   } catch (error) {
-      res.status(500).send({ message: 'Error fetching client details', error });
+    console.error("Error fetching client details:", error);
+    res.status(500).json({
+      message: "Error fetching client data",
+      error: error.message || 'Unknown error'
+    });
   }
 }
 
