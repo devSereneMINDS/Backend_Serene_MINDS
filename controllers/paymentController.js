@@ -419,16 +419,16 @@ async function createDirectPayment(req, res) {
     const client = await connectDb();
     try {
         // Validate professional exists
-        const result = await client.query(
-            'SELECT id, razorpay_account_details FROM public.professional WHERE id = $1',
-            [professionalId]
-        );
+        // const result = await client.query(
+        //     'SELECT id, razorpay_account_details FROM public.professional WHERE id = $1',
+        //     [professionalId]
+        // );
 
-        console.log("Professional Result",result);
+        // console.log("Professional Result",result);
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: "Professional not found" });
-        }
+        // if (result.rows.length === 0) {
+        //     return res.status(404).json({ message: "Professional not found" });
+        // }
 
         // Generate unique payment_id
         const paymentId = `payment_${Math.random().toString(36).substr(2, 9)}`;
@@ -451,15 +451,15 @@ async function createDirectPayment(req, res) {
         `;
 
         // Update razorpay_account_details with the new payment_id
-        const currentAccountDetails = result.rows[0].razorpay_account_details || {};
-        const updatedPaymentIds = currentAccountDetails.payment_ids
-            ? [...currentAccountDetails.payment_ids, paymentId]
-            : [paymentId];
+        // const currentAccountDetails = result.rows[0].razorpay_account_details || {};
+        // const updatedPaymentIds = currentAccountDetails.payment_ids
+        //     ? [...currentAccountDetails.payment_ids, paymentId]
+        //     : [paymentId];
 
-        await client.query(
-            'UPDATE public.professional SET razorpay_account_details = razorpay_account_details || $1 WHERE id = $2',
-            [{ payment_ids: updatedPaymentIds }, professionalId]
-        );
+        // await client.query(
+        //     'UPDATE public.professional SET razorpay_account_details = razorpay_account_details || $1 WHERE id = $2',
+        //     [{ payment_ids: updatedPaymentIds }, professionalId]
+        // );
 
         // Return the order details to the client to complete the payment
         res.status(200).json({
