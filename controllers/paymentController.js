@@ -414,65 +414,101 @@ async function getPaymentHistoryOfProfessionals(req, res) {
 }
 
 async function createDirectPayment(req, res) {
-    const { amount, currency, appointmentDetails, professionalId } = req.body;
+  console.log('Request body:', req.body); // Debug log
+  const { amount, currency, appointmentDetails, professionalId } = req.body;
 
-    const client = await connectDb();
-    try {
-        // Validate professional exists
-        // const result = await client.query(
-        //     'SELECT id, razorpay_account_details FROM public.professional WHERE id = $1',
-        //     [professionalId]
-        // );
+  // Validate inputs
+  if (!amount || isNaN(amount) || amount < 100) {
+    console.log('Invalid amount:', amount);
+    return res.status(400).json({ message: 'Amount must be a number and at least 100 INR' });
+  }
+  if (!professionalId) {
+    console.log('Missing professionalId');
+    return res.status(400).json({ message: 'Professional ID is required' });
+  }
+  if (!appointmentDetails) {
+    console.log('Missing appointmentDetails');
+    return res.status(400).json({ message: 'Appointment details are required' });
+  }
 
-        // console.log("Professional Result",result);
+  // Default to INR if currency is not provided
+  const validatedCurrency = currency && typeof currency === 'string' ? currency.toUpperCase() : 'INR';
+  if (validatedCurrency !== 'INR') {
+    console.log('Unsupported currency:', validatedCurrency);
+    return res.status(400).json({ message: 'Only INR is supported currently' });
+  }
 
-        // if (result.rows.length === 0) {
-        //     return res.status(404).json({ message: "Professional not found" });
-        // }
-
-        // Generate unique payment_id
-        const paymentId = `payment_${Math.random().toString(36).substr(2, 9)}`;
-
-        // Create a Razorpay order
-        const razorpayOrder = await razorpay.orders.create({
-            amount: amount * 100, // Convert to paise
-            currency: currency || "INR",
-            receipt: `order_${Math.random().toString(36).substr(2, 9)}`,
-            payment_capture: 1, // Auto-capture payment
-        });
-
-        const razorpayOrderId = razorpayOrder.id;
-
-        // Store the payment details in the database with payment_id
-        const [newPayment] = await sql`
-            INSERT INTO payments (id, razorpay_order_id, amount, currency, appointment_details, status, professional_id)
-            VALUES (${paymentId}, ${razorpayOrderId}, ${amount}, ${currency || "INR"}, ${appointmentDetails}, 'Pending', ${professionalId})
-            RETURNING *;
-        `;
-
-        // Update razorpay_account_details with the new payment_id
-        // const currentAccountDetails = result.rows[0].razorpay_account_details || {};
-        // const updatedPaymentIds = currentAccountDetails.payment_ids
-        //     ? [...currentAccountDetails.payment_ids, paymentId]
-        //     : [paymentId];
-
-        // await client.query(
-        //     'UPDATE public.professional SET razorpay_account_details = razorpay_account_details || $1 WHERE id = $2',
-        //     [{ payment_ids: updatedPaymentIds }, professionalId]
-        // );
-
-        // Return the order details to the client to complete the payment
-        res.status(200).json({
-            id: newPayment.razorpay_order_id,
-            currency: newPayment.currency,
-            amount: newPayment.amount,
-            order_id: razorpayOrderId,
-            order_link: razorpayOrder.short_url,
-        });
-    } catch (error) {
-        console.error("Error creating direct payment:", error);
-        res.status(500).json({ error: "Unable to create payment." });
+  const client = await connectDb();
+  try {
+    // Validate professional exists (uncomment if needed)
+    /*
+    const result = await client.query(
+      'SELECT id, razorpay_account_details FROM public.professional WHERE id = $1',
+      [professionalId]
+    );
+    console.log('Professional Result:', result.rows);
+    if (result.rows.length === 0) {
+      console.log('Professional not found:', professionalId);
+      return res.status(404).json({ message: 'Professional not found' });
     }
+    */
+
+    // Generate unique payment_id
+    const paymentId = `payment_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create a Razorpay order
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(amount * 100), // Convert to paise, ensure integer
+      currency: validatedCurrency,
+      receipt: `order_${Math.random().toString(36).substr(2, 9)}`,
+      payment_capture: 1 // Auto-capture payment
+    });
+    console.log('Razorpay Order Created:', razorpayOrder);
+
+    const razorpayOrderId = razorpayOrder.id;
+
+    // Store the payment details in the database
+    const [newPayment] = await sql`
+      INSERT INTO payments (id, razorpay_order_id, amount, currency, appointment_details, status, professional_id)
+      VALUES (${paymentId}, ${razorpayOrderId}, ${amount}, ${validatedCurrency}, ${appointmentDetails}, 'Pending', ${professionalId})
+      RETURNING *;
+    `;
+    console.log('New Payment Stored:', newPayment);
+
+    // Update razorpay_account_details (uncomment if needed)
+    /*
+    const currentAccountDetails = result.rows[0].razorpay_account_details || {};
+    const updatedPaymentIds = currentAccountDetails.payment_ids
+      ? [...currentAccountDetails.payment_ids, paymentId]
+      : [paymentId];
+    await client.query(
+      'UPDATE public.professional SET razorpay_account_details = razorpay_account_details || $1 WHERE id = $2',
+      [{ payment_ids: updatedPaymentIds }, professionalId]
+    );
+    console.log('Updated professional payment_ids:', updatedPaymentIds);
+    */
+
+    // Return the order details
+    res.status(200).json({
+      id: newPayment.razorpay_order_id,
+      currency: newPayment.currency,
+      amount: newPayment.amount,
+      order_id: razorpayOrderId,
+      order_link: razorpayOrder.short_url || null
+    });
+  } catch (error) {
+    console.error('Error creating direct payment:', {
+      message: error.message,
+      statusCode: error.statusCode,
+      details: error.error || error
+    });
+    if (error.statusCode === 400 && error.error?.description?.includes('minimum amount')) {
+      return res.status(400).json({ message: 'Order amount is below the minimum allowed. Minimum is INR 100.' });
+    }
+    res.status(500).json({ message: 'Unable to create payment', error: error.message });
+  } finally {
+    await client.release();
+  }
 }
 
 // Verify payment and mark it for settlement
