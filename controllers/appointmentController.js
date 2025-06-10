@@ -716,13 +716,16 @@ async function getMonthlyEarnings(req, res) {
 
 // Get client details filtered by professional ID
 async function getClientDetailsByProfessional(req, res) {
+  console.log('API called: getClientDetailsByProfessional'); // Log API invocation
+  console.log('Request body:', req.body); // Log incoming request body
+
   const { professionalId } = req.body;
 
   if (!professionalId) {
-    return res.status(400).send({ message: "Professional ID is required" });
+    console.log('Error: Professional ID is missing');
+    return res.status(400).json({ message: "Professional ID is required" });
   }
 
-  // Define options for q_1
   const Q1_OPTIONS = [
     'Anxiety/Stress',
     'Depression/Low mood',
@@ -737,6 +740,15 @@ async function getClientDetailsByProfessional(req, res) {
   ];
 
   try {
+    // Parse professionalId as a number
+    const parsedProfessionalId = parseInt(professionalId);
+    if (isNaN(parsedProfessionalId)) {
+      console.log('Error: Invalid Professional ID format', professionalId);
+      return res.status(400).json({ message: "Invalid Professional ID format" });
+    }
+
+    console.log(`Fetching clients for professionalId: ${parsedProfessionalId}`); // Log parsed ID
+
     const clientDetails = await sql`
       SELECT DISTINCT
         c.id,
@@ -747,54 +759,81 @@ async function getClientDetailsByProfessional(req, res) {
         c.phone_no AS phone_number, 
         c.email,
         c.photo_url,
-        c.q_and_a->>'q_1' AS q_1
+        c.q_and_a->>'q1' AS q_1
       FROM client c
       JOIN appointment a ON c.id = a.client_id
-      WHERE a.professional_id = ${professionalId};
+      WHERE a.professional_id = ${parsedProfessionalId};
     `;
 
+    console.log(`Found ${clientDetails.length} clients`); // Log number of clients
+    console.log('Raw clientDetails:', clientDetails); // Log raw query results
+
     if (clientDetails.length === 0) {
-      return res.status(404).send({ message: 'No clients found for the specified professional' });
+      console.log('No clients found for professionalId:', parsedProfessionalId);
+      return res.status(404).json({ message: 'No clients found for the specified professional' });
     }
 
-    // Map q_1 values to options
     const formattedClients = clientDetails.map(client => {
       let diagnosis = 'Not Available';
       
+      console.log(`Processing client ${client.id}`); // Log client being processed
+      console.log(`Raw q_1 for client ${client.id}:`, client.q_1); // Log raw q_1
+      console.log(`Type of q_1 for client ${client.id}:`, typeof client.q_1); // Log q_1 type
+
       if (client.q_1) {
         try {
-          // Parse q_1 (could be string or JSON array)
-          const q1Answers = Array.isArray(JSON.parse(client.q_1)) 
-            ? JSON.parse(client.q_1)
-            : [client.q_1];
+          // Handle both stringified JSON and direct arrays
+          const q1Answers = typeof client.q_1 === 'string' 
+            ? Array.isArray(JSON.parse(client.q_1)) 
+              ? JSON.parse(client.q_1)
+              : [JSON.parse(client.q_1)]
+            : Array.isArray(client.q_1)
+              ? client.q_1
+              : [client.q_1];
           
-          // Map valid indices to options
+          console.log(`Parsed q_1 for client ${client.id}:`, q1Answers); // Log parsed q_1
+
           const validAnswers = q1Answers
-            .filter(index => typeof index === 'string' && !isNaN(parseInt(index)) && Q1_OPTIONS[parseInt(index)])
+            .filter(index => {
+              const isValid = typeof index === 'string' && !isNaN(parseInt(index)) && Q1_OPTIONS[parseInt(index)];
+              console.log(`Filtering index ${index} for client ${client.id}:`, { isString: typeof index === 'string', isNumeric: !isNaN(parseInt(index)), hasOption: !!Q1_OPTIONS[parseInt(index)], isValid });
+              return isValid;
+            })
             .map(index => Q1_OPTIONS[parseInt(index)]);
           
+          console.log(`validAnswers for client ${client.id}:`, validAnswers); // Log valid answers
+
           diagnosis = validAnswers.length > 0 ? validAnswers.join(', ') : 'Not Available';
+          console.log(`Diagnosis for client ${client.id}:`, diagnosis); // Log final diagnosis
         } catch (error) {
-          console.error(`Error parsing q_1 for client ${client.id}:`, error);
+          console.error(`Error parsing q_1 for client ${client.id}:`, error.message); // Log parsing error
           diagnosis = 'Not Available';
         }
+      } else {
+        console.log(`No q_1 data for client ${client.id}`); // Log missing q_1
       }
 
-      return {
+      const clientData = {
         ...client,
         diagnosis: diagnosis,
-        q_1: undefined // Remove raw q_1 to avoid confusion
+        q_1: undefined
       };
+      console.log(`Formatted client ${client.id}:`, clientData); // Log formatted client
+
+      return clientData;
     });
 
-    res.status(200).json({
-      message: "Client details fetched successfully",
+    const response = {
+      message: "Success",
       data: formattedClients
-    });
+    };
+    console.log('API response:', response); // Log final response
+
+    res.status(200).json(response);
   } catch (error) {
-    console.error("Error fetching client details:", error);
+    console.error('Error fetching client data:', error.message); // Log server error
     res.status(500).json({
-      message: "Error fetching client data",
+      message: 'Error fetching client data',
       error: error.message || 'Unknown error'
     });
   }
