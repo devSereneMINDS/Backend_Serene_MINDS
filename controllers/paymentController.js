@@ -440,19 +440,6 @@ async function createDirectPayment(req, res) {
 
   const client = await connectDb();
   try {
-    // Validate professional exists (uncomment if needed)
-    /*
-    const result = await client.query(
-      'SELECT id, razorpay_account_details FROM public.professional WHERE id = $1',
-      [professionalId]
-    );
-    console.log('Professional Result:', result.rows);
-    if (result.rows.length === 0) {
-      console.log('Professional not found:', professionalId);
-      return res.status(404).json({ message: 'Professional not found' });
-    }
-    */
-
     // Generate unique payment_id
     const paymentId = `payment_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -475,19 +462,6 @@ async function createDirectPayment(req, res) {
     `;
     console.log('New Payment Stored:', newPayment);
 
-    // Update razorpay_account_details (uncomment if needed)
-    /*
-    const currentAccountDetails = result.rows[0].razorpay_account_details || {};
-    const updatedPaymentIds = currentAccountDetails.payment_ids
-      ? [...currentAccountDetails.payment_ids, paymentId]
-      : [paymentId];
-    await client.query(
-      'UPDATE public.professional SET razorpay_account_details = razorpay_account_details || $1 WHERE id = $2',
-      [{ payment_ids: updatedPaymentIds }, professionalId]
-    );
-    console.log('Updated professional payment_ids:', updatedPaymentIds);
-    */
-
     // Return the order details
     res.status(200).json({
       id: newPayment.razorpay_order_id,
@@ -506,9 +480,7 @@ async function createDirectPayment(req, res) {
       return res.status(400).json({ message: 'Order amount is below the minimum allowed. Minimum is INR 100.' });
     }
     res.status(500).json({ message: 'Unable to create payment', error: error.message });
-  } finally {
-    await client.release();
-  }
+  } 
 }
 
 // Verify payment and mark it for settlement
