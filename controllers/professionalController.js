@@ -18,7 +18,7 @@ async function createProfessional(req, res) {
         full_name, email, phone, photo_url, date_of_birth, proof_document,
         area_of_expertise = null, about_me = null, education = null,
         services = null, availability = null,
-         q_and_a = null,
+         q_and_a = null,banking_details = null,
         linkedin_account = null, instagram_account = null, banned_clients = null,razorpay_account_details = null,uid = null,
         city = null,pin_code = null,country = null,languages = null
     } = req.body;
@@ -34,12 +34,12 @@ async function createProfessional(req, res) {
             INSERT INTO professional 
             (full_name, email, phone, photo_url, date_of_birth, proof_document,
             area_of_expertise, about_me, education, services,
-            availability, q_and_a,
+            availability, q_and_a,banking_details,
             linkedin_account, instagram_account, banned_clients,razorpay_account_details,uid,city,pin_code,country,languages)
             VALUES
             (${full_name}, ${email}, ${phone}, ${photo_url}, ${date_of_birth}, ${proof_document},
             ${area_of_expertise}, ${about_me}, ${education}, ${services},
-            ${availability}, ${JSON.stringify(q_and_a)},
+            ${availability}, ${JSON.stringify(q_and_a)}, ${banking_details},
             ${linkedin_account}, ${instagram_account}, ${banned_clients},${razorpay_account_details},${uid},${city},${pin_code},${country},${languages})
             RETURNING *;
         `;
@@ -114,7 +114,7 @@ async function updateProfessional(req, res) {
     const updatableFields = [
         "full_name", "email", "phone", "photo_url", "date_of_birth", "proof_document",
         "area_of_expertise", "about_me", "education", "services",
-        "availability", "q_and_a",
+        "availability", "q_and_a","banking_details",
         "linkedin_account", "instagram_account", "banned_clients","razorpay_account_details","uid","city","pin_code","country","languages"
     ];
 
