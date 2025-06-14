@@ -173,7 +173,9 @@ async function handleTallySubmission(req, res) {
       'question_NlD6BN': 'q11',
       'question_qDadE8': 'q12',
       'question_QeMDBl': 'q13',
-      'question_QR7xvk': 'profile_photo'
+      'question_QR7xvk': 'profile_photo',
+      'question_YG4KRJ': 'trusted_contact',
+      'question_Dp7EKZ_7cce3908-4ce3-4a05-8282-643c80c008a4': 'accept_terms'
     };
 
     // Initialize form data object
@@ -189,7 +191,7 @@ async function handleTallySubmission(req, res) {
       if (!mappedKey) continue;
 
       // Handle different field types appropriately
-      if (field.type === 'INPUT_TEXT') {
+      if (field.type === 'INPUT_TEXT' || field.type === 'INPUT_PHONE_NUMBER') {
         formData[mappedKey] = field.value;
         if (mappedKey === 'email') {
           email = field.value.toLowerCase().trim();
@@ -224,8 +226,11 @@ async function handleTallySubmission(req, res) {
           // Store as single value or array based on field type
           if (field.type === 'MULTIPLE_CHOICE') {
             formData[mappedKey] = selectedIndices[0] || '0'; // Default to first option if none selected
+          } else if (mappedKey === 'accept_terms') {
+            // For accept_terms, store as boolean
+            formData[mappedKey] = field.value === true || selectedValues.includes('7cce3908-4ce3-4a05-8282-643c80c008a4');
           } else {
-            // For CHECKBOXES, store as array of indices
+            // For other CHECKBOXES, store as array of indices
             formData[mappedKey] = selectedIndices;
             
             // Additionally create boolean flags for each option (q10_1, q10_2, etc.)
