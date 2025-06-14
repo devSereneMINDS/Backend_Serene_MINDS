@@ -422,6 +422,61 @@ async function updateAppointment(req, res) {
       return res.status(404).send({ message: "Appointment not found" });
     }
 
+    if (appointment_time !== undefined) {
+      try {
+        // Fetch client, professional, and appointment details
+        const [appointmentDetails] = await sql`
+          SELECT 
+            a.service,
+            a.message,
+            a.phone AS appointment_phone,
+            c.name AS client_name,
+            c.phone_no AS client_phone,
+            p.full_name AS professional_name
+          FROM appointment a
+          JOIN client c ON a.client_id = c.id
+          JOIN professional p ON a.professional_id = p.id
+          WHERE a.id = ${appointmentId};
+        `;
+
+        if (!appointmentDetails) {
+          console.error("Failed to fetch appointment details for WhatsApp notification");
+          // Continue with response, but log the issue
+        } else {
+          const { client_name, professional_name, appointment_phone, client_phone, service, message } = appointmentDetails;
+          const destinationPhone = appointment_phone || client_phone;
+
+          if (!destinationPhone) {
+            console.error("No phone number available for WhatsApp notification");
+            // Continue with response, but log the issue
+          } else {
+            await sendWhatsAppMessage2({
+              campaignName: "client_appointment_rescheduled02",
+              destination: destinationPhone,
+              userName: "Serene MINDS",
+              templateParams: [
+                client_name,
+                professional_name,
+                `${new Date(appointment_time).toLocaleDateString()}`,
+                `${new Date(appointment_time).toLocaleTimeString()}`,
+                String(service) || "No Service Provided",
+                message || "No message provided",
+              ],
+            });
+            console.log("WhatsApp message sent successfully for updated appointment time");
+          }
+        }
+      } catch (whatsappError) {
+        console.error("Error sending WhatsApp message for updated appointment:", whatsappError);
+        // Continue with response, but include a note about the failure
+        return res.status(200).send({
+          message: "Appointment updated successfully, but failed to send WhatsApp notification",
+          data: result[0],
+          whatsappError: whatsappError.message,
+        });
+      }
+    }
+
     res.status(200).send({
       message: "Appointment updated successfully",
       data: result[0],
