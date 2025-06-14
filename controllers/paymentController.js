@@ -433,10 +433,7 @@ async function createDirectPayment(req, res) {
 
   // Default to INR if currency is not provided
   const validatedCurrency = currency && typeof currency === 'string' ? currency.toUpperCase() : 'INR';
-  if (validatedCurrency !== 'INR') {
-    console.log('Unsupported currency:', validatedCurrency);
-    return res.status(400).json({ message: 'Only INR is supported currently' });
-  }
+  
 
   const client = await connectDb();
   try {
