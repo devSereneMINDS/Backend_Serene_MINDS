@@ -611,8 +611,8 @@ async function generatePaymentReport(req, res) {
                 p.status, 
                 p.created_at,
                 pr.full_name,
-                pr.banking_details->>'account_no' AS account_no,
-                pr.banking_details->>'ifsc_code' AS ifsc_code
+                pr.banking_details->>'bankAccount' AS bankAccount,
+                pr.banking_details->>'ifscCode' AS ifscCode
             FROM payments p
             LEFT JOIN professional pr ON p.professional_id = pr.id
             WHERE DATE(p.created_at) = CURRENT_DATE
@@ -634,8 +634,8 @@ async function generatePaymentReport(req, res) {
             { header: "Status", key: "status", width: 15 },
             { header: "Created At", key: "created_at", width: 25 },
             { header: "Professional Name", key: "full_name", width: 25 },
-            { header: "Account Number", key: "account_no", width: 20 },
-            { header: "IFSC Code", key: "ifsc_code", width: 15 },
+            { header: "Account Number", key: "bankAccount", width: 20 },
+            { header: "IFSC Code", key: "ifscCode", width: 15 },
         ];
 
         payments.forEach((payment) => {
@@ -648,8 +648,8 @@ async function generatePaymentReport(req, res) {
                 status: payment.status,
                 created_at: new Date(payment.created_at).toLocaleString(),
                 full_name: payment.full_name || 'N/A',
-                account_no: payment.account_no || 'N/A',
-                ifsc_code: payment.ifsc_code || 'N/A',
+                account_no: payment.bankAccount || 'N/A',
+                ifsc_code: payment.ifscCode || 'N/A',
             });
         });
 
