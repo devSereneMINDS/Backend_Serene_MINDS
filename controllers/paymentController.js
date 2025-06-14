@@ -418,9 +418,9 @@ async function createDirectPayment(req, res) {
   const { amount, currency, appointmentDetails, professionalId } = req.body;
 
   // Validate inputs
-  if (!amount || isNaN(amount) || amount < 100) {
-    console.log('Invalid amount:', amount);
-    return res.status(400).json({ message: 'Amount must be a number and at least 100 INR' });
+  if (!amount || isNaN(amount)) {
+    // console.log('Invalid amount:', amount);
+    return res.status(400).json({ message: 'Amount must be a number' });
   }
   if (!professionalId) {
     console.log('Missing professionalId');
