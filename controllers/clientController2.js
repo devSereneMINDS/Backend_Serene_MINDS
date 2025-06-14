@@ -172,12 +172,14 @@ async function handleTallySubmission(req, res) {
       'question_ZEoNRA': 'q10',
       'question_NlD6BN': 'q11',
       'question_qDadE8': 'q12',
-      'question_QeMDBl': 'q13'
+      'question_QeMDBl': 'q13',
+      'question_QR7xvk': 'profile_photo'
     };
 
     // Initialize form data object
     const formData = {};
     let email = '';
+    let profilePhotoUrl = null;
 
     // Process each field in the request
     for (const field of req.body.data?.fields || []) {
@@ -192,7 +194,22 @@ async function handleTallySubmission(req, res) {
         if (mappedKey === 'email') {
           email = field.value.toLowerCase().trim();
         }
-      } 
+      }
+      else if (field.type === 'FILE_UPLOAD' && mappedKey === 'profile_photo') {
+        // Store the Tally-provided URL directly
+        if (field.value && field.value.length > 0) {
+          const file = field.value[0];
+          
+          // Validate file type (optional, for security)
+          const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+          if (!allowedTypes.includes(file.mimeType)) {
+            throw new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.');
+          }
+
+          profilePhotoUrl = file.url; // Use Tally's URL directly
+          formData[mappedKey] = profilePhotoUrl; // Store in formData
+        }
+      }
       else if (field.type === 'MULTIPLE_CHOICE' || field.type === 'CHECKBOXES') {
         // For fields with options, find the selected option's index
         if (field.options && field.options.length > 0) {
@@ -257,6 +274,7 @@ async function handleTallySubmission(req, res) {
           UPDATE client 
           SET 
             q_and_a = ${formData},
+            photo_url = ${profilePhotoUrl},
             updated_at = NOW()
           WHERE email = ${email}
           RETURNING *
@@ -265,11 +283,13 @@ async function handleTallySubmission(req, res) {
           INSERT INTO client (
             email, 
             q_and_a,
+            photo_url,
             created_at,
             updated_at
           ) VALUES (
             ${email},
             ${formData},
+            ${profilePhotoUrl},
             NOW(),
             NOW()
           )
