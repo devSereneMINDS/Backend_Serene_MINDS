@@ -29,6 +29,17 @@ async function createProfessional(req, res) {
         });
     }
 
+    const defaultServices = [{
+        price: 149,
+        currency: "INR",
+        duration: "30 minutes",
+        serviceTitle: "Wellness Buddy Chat",
+        serviceDescription: "Your personal, secret buddy to talk to anytime. Share what’s on your mind, feel heard, and get kind support from someone who cares. No Judgment, Full Privacy."
+    }];
+    const finalServices = area_of_expertise === "Wellness Buddy" && services === null 
+        ? defaultServices 
+        : services;
+
     try {
         const newProfessional = await sql`
             INSERT INTO professional 
@@ -38,7 +49,7 @@ async function createProfessional(req, res) {
             linkedin_account, instagram_account, banned_clients,razorpay_account_details,uid,city,pin_code,country,languages)
             VALUES
             (${full_name}, ${email}, ${phone}, ${photo_url}, ${date_of_birth}, ${proof_document},
-            ${area_of_expertise}, ${about_me}, ${education}, ${services},
+            ${area_of_expertise}, ${about_me}, ${education}, ${JSON.stringify(finalServices)},
             ${availability}, ${JSON.stringify(q_and_a)}, ${banking_details},
             ${linkedin_account}, ${instagram_account}, ${banned_clients},${razorpay_account_details},${uid},${city},${pin_code},${country},${languages})
             RETURNING *;
