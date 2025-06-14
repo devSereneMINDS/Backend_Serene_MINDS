@@ -430,9 +430,13 @@ async function updateAppointment(req, res) {
             a.service,
             a.message,
             a.phone AS appointment_phone,
+            a.meet_link,
             c.name AS client_name,
+            c.email AS client_email,
             c.phone_no AS client_phone,
-            p.full_name AS professional_name
+            p.full_name AS professional_name,
+            p.email AS professional_email,
+            p.phone AS professional_phone
           FROM appointment a
           JOIN client c ON a.client_id = c.id
           JOIN professional p ON a.professional_id = p.id
@@ -440,39 +444,104 @@ async function updateAppointment(req, res) {
         `;
 
         if (!appointmentDetails) {
-          console.error("Failed to fetch appointment details for WhatsApp notification");
-          // Continue with response, but log the issue
-        } else {
-          const { client_name, professional_name, appointment_phone, client_phone, service, message } = appointmentDetails;
-          const destinationPhone = appointment_phone || client_phone;
-
-          if (!destinationPhone) {
-            console.error("No phone number available for WhatsApp notification");
-            // Continue with response, but log the issue
-          } else {
-            await sendWhatsAppMessage2({
-              campaignName: "client_appointment_rescheduled02",
-              destination: destinationPhone,
-              userName: "Serene MINDS",
-              templateParams: [
-                client_name,
-                professional_name,
-                `${new Date(appointment_time).toLocaleDateString()}`,
-                `${new Date(appointment_time).toLocaleTimeString()}`,
-                String(service) || "No Service Provided",
-                message || "No message provided",
-              ],
-            });
-            console.log("WhatsApp message sent successfully for updated appointment time");
-          }
+          console.error("Failed to fetch appointment details for notifications");
+          return res.status(200).send({
+            message: "Appointment updated successfully, but failed to send notifications due to missing details",
+            data: result[0],
+          });
         }
-      } catch (whatsappError) {
-        console.error("Error sending WhatsApp message for updated appointment:", whatsappError);
-        // Continue with response, but include a note about the failure
+
+        const { 
+          client_name, client_email, client_phone, 
+          professional_name, professional_email, professional_phone,
+          appointment_phone, service, message: appointmentMessage, meet_link 
+        } = appointmentDetails;
+        const destinationPhone = appointment_phone || client_phone;
+
+        // Initialize email transporter
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        });
+
+        // Prepare email content
+        const appointmentDetailsText = `
+          - Patient Name: ${client_name}
+          - Phone Number: ${destinationPhone || "Not Provided"}
+          - Date: ${new Date(appointment_time).toLocaleDateString()}
+          - Time: ${new Date(appointment_time).toLocaleTimeString()}
+          - Location: "Online"
+          - Meeting Link: ${meet_link || "Not Provided"}
+          - Additional Message: ${appointmentMessage || "No message provided."}
+        `;
+
+        const professionalEmailBody = `
+          <p>Hello <b>${professional_name}</b>,</p>
+          <p>This is to inform you that an appointment has been rescheduled.</p>
+          <p><b>Meeting Link:</b> ${meet_link || "Not Provided"}</p>
+          <p><b>Appointment Details:</b></p>
+          <pre>${appointmentDetailsText}</pre>
+          <p><i>Thank you for providing your valuable services through Serene MINDS.</i></p>
+          <p><u>This is an automated message. Please do not reply.</u></p>
+          <p>Best regards,</p>
+          <p><b>Serene MINDS Team</b></p>
+        `;
+
+        const clientEmailBody = `
+          <p>Hello <b>${client_name}</b>,</p>
+          <p>Your appointment has been successfully rescheduled.</p>
+          <p><b>Meeting Link:</b> ${meet_link || "Not Provided"}</p>
+          <p><b>Appointment Details:</b></p>
+          <ul>
+            <li><b>Psychologist Name:</b> ${professional_name}</li>
+            <li><b>Date:</b> ${new Date(appointment_time).toLocaleDateString()}</li>
+            <li><b>Time:</b> ${new Date(appointment_time).toLocaleTimeString()}</li>
+            <li><b>Mode:</b> "Online"</li>
+            <li><b>Location:</b> "Online"</li>
+          </ul>
+          <p>If you need to reschedule or cancel the appointment, please contact the psychologist.</p>
+          <p><i>This is an automated message. Please do not reply.</i></p>
+          <p>Thank you for choosing Serene MINDS.</p>
+          <p><b>Best regards,</b></p>
+          <p><b>Serene MINDS Team</b></p>
+        `;
+
+        // Send WhatsApp message and emails concurrently
+        await Promise.all([
+          destinationPhone ? sendWhatsAppMessage2({
+            campaignName: "client_appointment_details03",
+            destination: destinationPhone,
+            userName: "Serene MINDS",
+            templateParams: [
+              client_name,
+              professional_name,
+              `${new Date(appointment_time).toLocaleDateString()}`,
+              `${new Date(appointment_time).toLocaleTimeString()}`,
+              String(service) || "No Service Provided",
+              appointmentMessage || "No message provided",
+            ],
+          }) : Promise.resolve().then(() => console.log("No phone number available for WhatsApp notification")),
+          transporter.sendMail({
+            from: `"Serene MINDS" <${process.env.EMAIL_USER}>`,
+            to: client_email,
+            subject: `Your Appointment Has Been Rescheduled`,
+            html: clientEmailBody,
+          }),
+          transporter.sendMail({
+            from: `"Serene MINDS" <${process.env.EMAIL_USER}>`,
+            to: professional_email,
+            subject: `Appointment Rescheduled with ${client_name}`,
+            html: professionalEmailBody,
+          }),
+        ]);
+
+        console.log("WhatsApp message and emails sent successfully for updated appointment time");
+      } catch (notificationError) {
+        console.error("Error sending notifications for updated appointment:", notificationError);
         return res.status(200).send({
-          message: "Appointment updated successfully, but failed to send WhatsApp notification",
+          message: "Appointment updated successfully, but failed to send notifications",
           data: result[0],
-          whatsappError: whatsappError.message,
+          notificationError: notificationError.message,
         });
       }
     }
