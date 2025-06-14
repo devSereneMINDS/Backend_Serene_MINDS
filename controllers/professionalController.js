@@ -305,8 +305,14 @@ async function getNullFields(req, res) {
             , "city", "country", "languages"
         ];
 
-        const nullFields = fields.filter(field => professional[0][field] === null || professional[0][field] === undefined);
-
+        const nullFields = fields.filter(field => {
+            const value = professional[0][field];
+            return value === null || 
+                   value === undefined || 
+                   value === "" || 
+                   (typeof value === 'object' && value !== null && Object.keys(value).length === 0);
+        });
+        
         res.status(200).send({
             message: "Null fields retrieved successfully",
             data: {
