@@ -576,8 +576,7 @@ async function getProfessionalPaymentHistory(req, res) {
                    p.appointment_details, p.status, p.created_at
             FROM payments p
             WHERE p.professional_id = ${professionalId}
-              AND p.status = 'Success'
-              AND DATE(p.created_at) = CURRENT_DATE;
+              AND p.status = 'Success';
         `;
 
         if (payments.length === 0) {
