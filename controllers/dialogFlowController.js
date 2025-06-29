@@ -200,10 +200,10 @@ const intentHandlers = {
       });
 
       // Send catalogue template
-      await sendWhatsAppMessage(userPhone, {
-        campaignName: DIALOGFLOW_CATALOGUE,
-        templateParams: []
-      });
+      // await sendWhatsAppMessage(userPhone, {
+      //   campaignName: DIALOGFLOW_CATALOGUE,
+      //   templateParams: []
+      // });
 
       return {
         fulfillmentText: `Thanks ${name}! We've registered you with Serene MINDS. How can we assist you today?`
