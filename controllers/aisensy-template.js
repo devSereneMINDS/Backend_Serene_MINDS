@@ -1,6 +1,6 @@
-export const PROFESSIONAL_APPOINTMENT_NOTIFICATION = "professional_appointment";
-export const CLIENT_APPOINTMENT_CONFIRMATION = "client_appointment_details03";
-export const CLIENT_ONBOARDING_WELCOME = "client_onboarding_02";
+export const PROFESSIONAL_APPOINTMENT_NOTIFICATION = "professional_appointment_details";
+export const CLIENT_APPOINTMENT_CONFIRMATION = "client_appointment_confirmation_first";
+export const CLIENT_ONBOARDING_WELCOME = "client_onboarding_form";
 export const PROFESSIONAL_ONBOARDING = "professional_onboarding";
 export const DIALOGFLOW_WELCOME_TEXT = "dialogflow_welcometext";
 export const DIALOGFLOW_CATALOGUE = "dialogflow_catalogue";
