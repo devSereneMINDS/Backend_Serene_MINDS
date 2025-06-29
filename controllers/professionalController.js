@@ -16,7 +16,7 @@ async function getProfessionalsList(req, res) {
 // Create a new professional
 async function createProfessional(req, res) {
     const {
-        full_name, email, phone, photo_url, date_of_birth, proof_document,
+        full_name, email, phone, photo_url = null, date_of_birth, proof_document,
         area_of_expertise = null, about_me = null, education = null,
         services = null, availability = null,
          q_and_a = null,banking_details = null,
@@ -24,9 +24,9 @@ async function createProfessional(req, res) {
         city = null,pin_code = null,country = null,languages = null
     } = req.body;
 
-    if (!full_name || !email || !phone || !date_of_birth || !photo_url || !proof_document) {
+    if (!full_name || !email || !phone || !date_of_birth  || !proof_document) {
         return res.status(400).send({
-            message: "Required fields are missing: full_name, email, phone,photo_url,proof_document and date_of_birth"
+            message: "Required fields are missing: full_name, email, phone,proof_document and date_of_birth"
         });
     }
 
