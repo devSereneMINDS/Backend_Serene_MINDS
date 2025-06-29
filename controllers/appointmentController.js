@@ -5,7 +5,7 @@ import {
   PROFESSIONAL_APPOINTMENT_NOTIFICATION, 
   CLIENT_APPOINTMENT_CONFIRMATION, 
   CLIENT_ONBOARDING_WELCOME 
-} from "./aisensy-templates.js";
+} from "./aisensy-template.js";
 
 // Utility function for error handling
 function handleError(res, error, message, statusCode = 500) {
