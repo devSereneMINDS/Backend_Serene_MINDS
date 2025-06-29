@@ -1,4 +1,5 @@
 import sql from "../config/db.js";
+import { PROFESSIONAL_ONBOARDING } from "./aisensy-templates.js";
 
 // Get a list of all professionals
 async function getProfessionalsList(req, res) {
@@ -61,7 +62,7 @@ async function createProfessional(req, res) {
 
         const whatsappPayload = {
             apiKey,
-            campaignName: "proessional_onboarding",
+            campaignName: PROFESSIONAL_ONBOARDING,
             destination: String(phone), 
             userName: "Serene MINDS",
             templateParams: [String(full_name)] 
