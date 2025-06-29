@@ -1,4 +1,5 @@
 import sql from '../config/db.js';
+import { PROFESSIONAL_ONBOARDING } from "./aisensy-template.js";
 
 const AISENSY_URL = process.env.AISENSY_URL;
 const AISENSY_API_KEY = process.env.AISENSY_API_KEY?.trim();
@@ -83,7 +84,7 @@ const intentHandlers = {
         // Existing user flow
         try {
           await sendWhatsAppMessage(phone, {
-            campaignName: "dialogflow_welcometext",
+            campaignName: DIALOGFLOW_WELCOME_TEXT,
             templateParams: [existingUser[0].name]
           });
         } catch (error) {
@@ -122,7 +123,7 @@ const intentHandlers = {
 
       // Send WhatsApp message with the catalogue template
       await sendWhatsAppMessage(userPhone, {
-        campaignName: "dialogflow_catalogue",
+        campaignName: DIALOGFLOW_CATALOGUE,
         templateParams: [] // No parameters needed for this template
       });
 
@@ -194,13 +195,13 @@ const intentHandlers = {
 
       // Send welcome message via WhatsApp
       await sendWhatsAppMessage(phone, {
-        campaignName: "welcometext",
+        campaignName: WELCOME_TEXT,
         templateParams: [name]
       });
 
       // Send catalogue template
       await sendWhatsAppMessage(userPhone, {
-        campaignName: "dialogflow_catalogue",
+        campaignName: DIALOGFLOW_CATALOGUE,
         templateParams: []
       });
 
@@ -302,13 +303,13 @@ const intentHandlers = {
     `;
 
     await sendWhatsAppMessage(userPhone, {
-          campaignName: "welcometext",
+          campaignName: WELCOME_TEXT,
           templateParams: [name]
         });
 
     // Send catalogue template
     await sendWhatsAppMessage(userPhone, {
-      campaignName: "dialogflow_catalogue",
+      campaignName: DIALOGFLOW_CATALOGUE,
       templateParams: []
     });
 
@@ -355,7 +356,7 @@ const intentHandlers = {
       // Send welcome message via WhatsApp
       try {
         await sendWhatsAppMessage(userPhone, {
-          campaignName: "welcometext",
+          campaignName: WELCOME_TEXT,
           templateParams: [newUser[0].name]
         });
       } catch (error) {
@@ -406,7 +407,7 @@ const intentHandlers = {
       if (userPhone) {
         try {
           await sendWhatsAppMessage(userPhone, {
-            campaignName: "suggestprofessional",
+            campaignName: SUGGEST_PROFESSIONAL,
             templateParams: [
               professional.full_name,
               professional.area_of_expertise || areaOfExpertise,
@@ -468,7 +469,7 @@ const intentHandlers = {
       if (userPhone) {
         try {
           await sendWhatsAppMessage(userPhone, {
-            campaignName: "suggestprofessional",
+            campaignName: SUGGEST_PROFESSIONAL,
             templateParams: [
               professional.full_name,
               professional.area_of_expertise || areaOfExpertise,
@@ -530,7 +531,7 @@ const intentHandlers = {
       if (userPhone) {
         try {
           await sendWhatsAppMessage(userPhone, {
-            campaignName: "suggestprofessional",
+            campaignName: SUGGEST_PROFESSIONAL,
             templateParams: [
               professional.full_name,
               professional.area_of_expertise || areaOfExpertise,
@@ -589,7 +590,7 @@ const intentHandlers = {
       if (userPhone) {
         try {
           await sendWhatsAppMessage(userPhone, {
-            campaignName: "sendbookinglink",
+            campaignName: SEND_BOOKING_LINK,
             templateParams: [professional.full_name, bookingLink],
             media: { url: photoUrl, filename: "professional_photo.jpg" }
           });
@@ -638,26 +639,26 @@ const intentHandlers = {
   },
 
   // Add this to your intentHandlers object, along with the other handlers
-'dontKnowIntent': async (queryResult, userPhone) => {
-  try {
-    if (!userPhone) {
-      console.error('No phone number available to send message');
+  'dontKnowIntent': async (queryResult, userPhone) => {
+    try {
+      if (!userPhone) {
+        console.error('No phone number available to send message');
+        return {};
+      }
+  
+      // Send WhatsApp message with the notknow template
+      await sendWhatsAppMessage(userPhone, {
+        campaignName: DIALOGFLOW_NOT_KNOW,
+        templateParams: [] // No parameters needed for this template
+      });
+  
+      // Return empty response since we're just sending a message
       return {};
+    } catch (error) {
+      console.error('Error in dontKnowIntent:', error);
+      return {}; // Still return empty to avoid showing error to user
     }
-
-    // Send WhatsApp message with the notknow template
-    await sendWhatsAppMessage(userPhone, {
-      campaignName: "dialogflow_notknow",
-      templateParams: [] // No parameters needed for this template
-    });
-
-    // Return empty response since we're just sending a message
-    return {};
-  } catch (error) {
-    console.error('Error in dontKnowIntent:', error);
-    return {}; // Still return empty to avoid showing error to user
-  }
-},
+  },
 
   // Default fallback intent
   'Default Fallback Intent': async () => {
