@@ -8,3 +8,4 @@ export const WELCOME_TEXT = "welcometext";
 export const SUGGEST_PROFESSIONAL = "suggest_professional";
 export const SEND_BOOKING_LINK = "sendbookinglink";
 export const DIALOGFLOW_NOT_KNOW = "dialogflow_notknow";
+export const PROFESSIONAL_OTP_AUTHENTICATION = "professional_authentication";
