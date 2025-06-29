@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import { PROFESSIONAL_OTP_AUTHENTICATION } from './aisensy-template.js';
 
 const otpStore = new Map(); // Using Map for better performance and data handling
 
