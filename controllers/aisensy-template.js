@@ -5,6 +5,6 @@ export const PROFESSIONAL_ONBOARDING = "professional_onboarding";
 export const DIALOGFLOW_WELCOME_TEXT = "dialogflow_welcometext";
 export const DIALOGFLOW_CATALOGUE = "dialogflow_catalogue";
 export const WELCOME_TEXT = "welcometext";
-export const SUGGEST_PROFESSIONAL = "suggestprofessional";
+export const SUGGEST_PROFESSIONAL = "suggest_professional";
 export const SEND_BOOKING_LINK = "sendbookinglink";
 export const DIALOGFLOW_NOT_KNOW = "dialogflow_notknow";
