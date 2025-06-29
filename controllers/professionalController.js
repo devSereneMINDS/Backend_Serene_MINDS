@@ -1,5 +1,5 @@
 import sql from "../config/db.js";
-import { PROFESSIONAL_ONBOARDING } from "./aisensy-templates.js";
+import { PROFESSIONAL_ONBOARDING } from "./aisensy-template.js";
 
 // Get a list of all professionals
 async function getProfessionalsList(req, res) {
