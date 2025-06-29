@@ -1,5 +1,5 @@
 import sql from '../config/db.js';
-import { PROFESSIONAL_ONBOARDING } from "./aisensy-template.js";
+import { DIALOGFLOW_WELCOME_TEXT,DIALOGFLOW_CATALOGUE,DIALOGFLOW_NOT_KNOW,SEND_BOOKING_LINK,SUGGEST_PROFESSIONAL } from "./aisensy-template.js";
 
 const AISENSY_URL = process.env.AISENSY_URL;
 const AISENSY_API_KEY = process.env.AISENSY_API_KEY?.trim();
@@ -195,7 +195,7 @@ const intentHandlers = {
 
       // Send welcome message via WhatsApp
       await sendWhatsAppMessage(phone, {
-        campaignName: WELCOME_TEXT,
+        campaignName: DIALOGFLOW_WELCOME_TEXT,
         templateParams: [name]
       });
 
@@ -303,7 +303,7 @@ const intentHandlers = {
     `;
 
     await sendWhatsAppMessage(userPhone, {
-          campaignName: WELCOME_TEXT,
+          campaignName: DIALOGFLOW_WELCOME_TEXT,
           templateParams: [name]
         });
 
@@ -356,7 +356,7 @@ const intentHandlers = {
       // Send welcome message via WhatsApp
       try {
         await sendWhatsAppMessage(userPhone, {
-          campaignName: WELCOME_TEXT,
+          campaignName: DIALOGFLOW_WELCOME_TEXT,
           templateParams: [newUser[0].name]
         });
       } catch (error) {
