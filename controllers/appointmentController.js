@@ -1,6 +1,11 @@
 import sql from "../config/db.js";
 import nodemailer from "nodemailer";
 import { sendWhatsAppMessage2 } from "./whatsapp.js";
+import { 
+  PROFESSIONAL_APPOINTMENT_NOTIFICATION, 
+  CLIENT_APPOINTMENT_CONFIRMATION, 
+  CLIENT_ONBOARDING_WELCOME 
+} from "./aisensy-templates.js";
 
 // Utility function for error handling
 function handleError(res, error, message, statusCode = 500) {
@@ -294,7 +299,7 @@ async function createAppointment(req, res) {
     try {
       await Promise.all([
         sendWhatsAppMessage2({
-          campaignName: "professional_appointment",
+          campaignName: PROFESSIONAL_APPOINTMENT_NOTIFICATION,
           destination: professional.phone,
           userName: "Serene MINDS",
           templateParams: [
@@ -310,7 +315,7 @@ async function createAppointment(req, res) {
         }),
 
         sendWhatsAppMessage2({
-          campaignName: "client_appointment_details03",
+          campaignName: CLIENT_APPOINTMENT_CONFIRMATION,
           destination: phone,
           userName: "Serene MINDS",
           templateParams: [
@@ -324,7 +329,7 @@ async function createAppointment(req, res) {
         }),
 
         sendWhatsAppMessage2({
-          campaignName: "client_onboarding_02",
+          campaignName: CLIENT_ONBOARDING_WELCOME,
           destination: phone,
           userName: "Serene MINDS",
           templateParams: [client.name],
@@ -509,7 +514,7 @@ async function updateAppointment(req, res) {
         // Send WhatsApp message and emails concurrently
         await Promise.all([
           destinationPhone ? sendWhatsAppMessage2({
-            campaignName: "client_appointment_details03",
+            campaignName: CLIENT_APPOINTMENT_CONFIRMATION,
             destination: destinationPhone,
             userName: "Serene MINDS",
             templateParams: [
