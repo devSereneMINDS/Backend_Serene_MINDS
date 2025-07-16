@@ -128,13 +128,13 @@ async function getProfessionalForBooking(req, res) {
     try {
         const professional = isId
             ? await sql`
-                SELECT email, id, area_of_expertise, availability, banking_details, 
+                SELECT full_name, email, id, area_of_expertise, availability, banking_details, 
                        photo_url, services
                 FROM professional
                 WHERE id = ${idOrName};
               `
             : await sql`
-                SELECT email, id, area_of_expertise, availability, banking_details, 
+                SELECT full_name, email, id, area_of_expertise, availability, banking_details, 
                          photo_url, services
                 FROM professional
                 WHERE full_name ILIKE ${idOrName};
