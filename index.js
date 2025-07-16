@@ -1,11 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
-import cors from 'cors'; // Import CORS middleware
-// import fs from "fs";
-// import https from "https";
-// import http from "http";
-// import appointmentRoutes from "./routes/appointmentRoutes.js";
-// import clientRoutes from "./routes/clientRoutes.js";
+import cors from 'cors'; 
 import clientRoutes2 from "./routes/clientRoutes2.js";
 import healthTipsRoutes from "./routes/healthTipsRoutes.js";
 import professionalRoutes from "./routes/professionalRoutes.js";
@@ -19,6 +14,7 @@ import sendRoutes from "./routes/sendRoutes.js";
 import whatsappRoutes from "./routes/whatsappRoute.js";
 import blogRoutes from "./routes/blogRoutes.js";
 import webhookRoutes from "./routes/webhook.js";
+import { verifyFirebaseAndAuthorize } from './middlewares/verifyFirebaseToken.js';
 
 dotenv.config();
 
@@ -54,26 +50,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// const ably = new Ably.Realtime('RmCyEw.Tnw63A:23-5uXcZ8PskXlfhDx8D3r-Vz_SluVCCu02c2rCn0GU');
-// const channel = ably.channels.get('chatroom');
-
-// console.log('Allowed Origins:', allowedOrigins);
-
 
 // Routes
-// app.use('/api/appointments', appointmentRoutes);
-app.use('/api/appointment', appointmentRoutes2);
-// app.use('/api/clients', clientRoutes);
-app.use('/api/clients2', clientRoutes2);
-app.use("/api/tips", healthTipsRoutes);
-app.use('/api/professionals', professionalRoutes);
-app.use("/api/notes", notesRoutes);
-app.use("/api/otp", otpRoutes);
-app.use("/api/journals", journalRoutes);
-app.use("/api/payments", paymentRoutes);
-app.use("/api/events", eventRoutes);
-app.use("/api/send", sendRoutes);
-app.use("/api/whatsapp", whatsappRoutes);
+app.use('/api/appointment',verifyFirebaseAndAuthorize, appointmentRoutes2);
+app.use('/api/clients2',verifyFirebaseAndAuthorize, clientRoutes2);
+app.use("/api/tips",verifyFirebaseAndAuthorize, healthTipsRoutes);
+app.use('/api/professionals',verifyFirebaseAndAuthorize, professionalRoutes);
+app.use("/api/notes",verifyFirebaseAndAuthorize, notesRoutes);
+app.use("/api/otp",verifyFirebaseAndAuthorize, otpRoutes);
+app.use("/api/journals",verifyFirebaseAndAuthorize, journalRoutes);
+app.use("/api/payments",verifyFirebaseAndAuthorize, paymentRoutes);
+app.use("/api/events",verifyFirebaseAndAuthorize, eventRoutes);
+app.use("/api/send",verifyFirebaseAndAuthorize, sendRoutes);
+app.use("/api/whatsapp",verifyFirebaseAndAuthorize, whatsappRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/webhook", webhookRoutes);
 app.get("/", (req, res) => {
