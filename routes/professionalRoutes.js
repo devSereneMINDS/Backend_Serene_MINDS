@@ -9,7 +9,8 @@ import {
     searchByKeyword,
     getProfessionalByEmail,
     getRandomProfessionalByExpertise,
-    getNullFields
+    getNullFields,
+    getProfessionalForBooking
 } from '../controllers/professionalController.js';
 
 const router = express.Router();
@@ -23,5 +24,6 @@ router.get('/search/:keyword/:professionalId',searchByKeyword);
 router.get('/email/:email', getProfessionalByEmail);
 router.get('/expertise/:areaOfExpertise', getRandomProfessionalByExpertise);
 router.get('/null/:professionalId', getNullFields);
+router.get('/booking/:idOrName', getProfessionalForBooking);
 
 export default router;

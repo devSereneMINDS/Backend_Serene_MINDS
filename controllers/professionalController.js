@@ -120,6 +120,37 @@ async function getProfessional(req, res) {
     }
 }
 
+// Get professional by ID or name with limited fields for booking
+async function getProfessionalForBooking(req, res) {
+    const { idOrName } = req.params;
+    const isId = !isNaN(idOrName);
+
+    try {
+        const professional = isId
+            ? await sql`
+                SELECT email, id, area_of_expertise, availability, banking_details, 
+                       languages, phone, photo_url, services, uid
+                FROM professional
+                WHERE id = ${idOrName};
+              `
+            : await sql`
+                SELECT email, id, area_of_expertise, availability, banking_details, 
+                       languages, phone, photo_url, services, uid
+                FROM professional
+                WHERE full_name ILIKE ${idOrName};
+              `;
+
+        if (professional.length === 0) {
+            return res.status(404).send({ message: 'Professional not found' });
+        }
+
+        res.status(200).send(professional[0]);
+    } catch (error) {
+        res.status(500).send({ message: 'Error fetching professional for booking', error });
+    }
+}
+
+
 // Update a professional's details
 async function updateProfessional(req, res) {
     const { professionalId } = req.params;
@@ -339,4 +370,5 @@ export {
     getProfessionalByEmail,
     getRandomProfessionalByExpertise,
     getNullFields,
+    getProfessionalForBooking
 };
